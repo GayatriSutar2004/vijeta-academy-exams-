@@ -1,0 +1,40 @@
+Section 1: Mathematics
+
+Question 1: What is the derivative of x^2?
+A) 2x
+B) x^2
+C) 2x^2
+D) x
+Correct: A
+
+Question 2: Solve for x: 2x + 5 = 15
+A) x = 5
+B) x = 10
+C) x = 7.5
+D) x = 20
+Correct: A
+
+Section 2: Physics
+
+Question 3: What is Newton's Second Law?
+A) F = ma
+B) E = mc^2
+C) PV = nRT
+D) F = Gm1m2/r^2
+Correct: A
+
+Question 4: What is the speed of light in vacuum?
+A) 3 x 10^8 m/s
+B) 2 x 10^8 m/s
+C) 4 x 10^8 m/s
+D) 1 x 10^8 m/s
+Correct: A
+
+Section 3: Chemistry
+
+Question 5: What is the chemical formula for water?
+A) H2O
+B) CO2
+C) NaCl
+D) O2
+Correct: A

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload Button</title>
+</head>
+<body>
+    <h2>Test Upload Functionality</h2>
+    
+    <form id="uploadForm">
+        <input type="text" id="examName" placeholder="Exam Name" value="Test Exam"><br><br>
+        <input type="text" id="hour" placeholder="Hour" value="1"><br><br>
+        <input type="text" id="minute" placeholder="Minutes" value="0"><br><br>
+        <input type="text" id="questions" placeholder="Total Questions" value="3"><br><br>
+        <select id="examType">
+            <option value="NDA">NDA</option>
+            <option value="NEET">NEET</option>
+            <option value="JEE">JEE</option>
+        </select><br><br>
+        <input type="file" id="fileInput" accept=".docx,.doc,.txt"><br><br>
+        <button type="button" onclick="testUpload()">Upload Test Document</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <script>
+        function testUpload() {
+            console.log("=== FRONTEND UPLOAD TEST STARTED ===");
+            
+            const examName = document.getElementById('examName').value;
+            const hour = document.getElementById('hour').value;
+            const minute = document.getElementById('minute').value;
+            const questions = document.getElementById('questions').value;
+            const examType = document.getElementById('examType').value;
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            console.log("Form values:", {
+                examName,
+                hour,
+                minute,
+                questions,
+                examType,
+                fileName: file?.name,
+                fileSize: file?.size
+            });
+            
+            if(!examName || !hour || !minute || !questions || !examType || !file) {
+                console.error("Validation failed - missing fields");
+                document.getElementById('result').innerHTML = "Please fill all fields and select a file";
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('exam_name', examName);
+            formData.append('duration_minutes', parseInt(hour)*60 + parseInt(minute));
+            formData.append('total_questions', questions);
+            formData.append('exam_type', examType);
+            formData.append('file', file);
+            
+            console.log("FormData created, sending request...");
+            
+            fetch('http://localhost:3001/api/exams/add', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log("Response received:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("Response data:", data);
+                document.getElementById('result').innerHTML = "Success: " + JSON.stringify(data);
+            })
+            .catch(error => {
+                console.error("Upload error:", error);
+                document.getElementById('result').innerHTML = "Error: " + error.message;
+            });
+        }
+    </script>
+</body>
+</html>

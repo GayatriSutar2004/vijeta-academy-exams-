@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Button Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin: 10px 0; }
+        input, select, button { padding: 8px; margin: 5px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h2>Upload Button Test - Debug Version</h2>
+    
+    <div class="form-group">
+        <input type="text" id="examName" placeholder="Exam Name" value="Test Exam">
+    </div>
+    
+    <div class="form-group">
+        <input type="text" id="hour" placeholder="Hour" value="1" style="width: 80px;">
+        <input type="text" id="minute" placeholder="Minutes" value="0" style="width: 80px;">
+        <select id="examType">
+            <option value="NDA">NDA</option>
+            <option value="NEET">NEET</option>
+            <option value="JEE">JEE</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <input type="text" id="questions" placeholder="Total Questions" value="3">
+    </div>
+    
+    <div class="form-group">
+        <input type="file" id="fileInput" accept=".docx,.doc,.txt">
+        <div id="fileInfo"></div>
+    </div>
+    
+    <div class="form-group">
+        <button id="uploadBtn" onclick="testUpload()" disabled>Upload Test Document (.docx)</button>
+    </div>
+    
+    <div id="result" class="result"></div>
+
+    <script>
+        let selectedFile = null;
+        
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            selectedFile = e.target.files[0];
+            console.log("File selected:", selectedFile);
+            
+            const fileInfo = document.getElementById('fileInfo');
+            if (selectedFile) {
+                fileInfo.innerHTML = `<p style="color: green; font-weight: bold;">Selected: ${selectedFile.name}</p>`;
+            } else {
+                fileInfo.innerHTML = '';
+            }
+            
+            updateButtonState();
+        });
+        
+        // Input change handlers
+        ['examName', 'hour', 'minute', 'questions', 'examType'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateButtonState);
+        });
+        
+        function updateButtonState() {
+            const examName = document.getElementById('examName').value;
+            const hour = document.getElementById('hour').value;
+            const minute = document.getElementById('minute').value;
+            const questions = document.getElementById('questions').value;
+            const examType = document.getElementById('examType').value;
+            
+            const isDisabled = !examName || !hour || !minute || !questions || !examType || !selectedFile;
+            
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = isDisabled;
+            uploadBtn.style.backgroundColor = isDisabled ? '#ccc' : '#007bff';
+            uploadBtn.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+            
+            console.log("Button state updated:", { isDisabled, examName, hour, minute, questions, examType, hasFile: !!selectedFile });
+        }
+        
+        async function testUpload() {
+            console.log("=== UPLOAD BUTTON CLICKED ===");
+            
+            const examName = document.getElementById('examName').value;
+            const hour = document.getElementById('hour').value;
+            const minute = document.getElementById('minute').value;
+            const questions = document.getElementById('questions').value;
+            const examType = document.getElementById('examType').value;
+            
+            console.log("Form values:", {
+                examName,
+                hour,
+                minute,
+                questions,
+                examType,
+                fileName: selectedFile?.name,
+                fileSize: selectedFile?.size
+            });
+            
+            if(!examName || !hour || !minute || !questions || !examType || !selectedFile) {
+                console.error("Validation failed - missing fields");
+                document.getElementById('result').innerHTML = "Please fill all fields and select a file";
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('exam_name', examName);
+            formData.append('duration_minutes', parseInt(hour)*60 + parseInt(minute));
+            formData.append('total_questions', questions);
+            formData.append('exam_type', examType);
+            formData.append('file', selectedFile);
+            
+            console.log("FormData created, sending request...");
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/exams/add', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log("Response received:", response.status);
+                
+                const data = await response.json();
+                console.log("Response data:", data);
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>Success!</h3>
+                    <p>Status: ${response.status}</p>
+                    <p>Data: ${JSON.stringify(data, null, 2)}</p>
+                `;
+                
+                // Reset form
+                document.getElementById('examName').value = '';
+                document.getElementById('hour').value = '';
+                document.getElementById('minute').value = '';
+                document.getElementById('questions').value = '';
+                document.getElementById('examType').value = 'NDA';
+                document.getElementById('fileInput').value = '';
+                document.getElementById('fileInfo').innerHTML = '';
+                selectedFile = null;
+                updateButtonState();
+                
+            } catch (error) {
+                console.error("Upload error:", error);
+                document.getElementById('result').innerHTML = `
+                    <h3>Error!</h3>
+                    <p>${error.message}</p>
+                    <p>Check browser console for more details.</p>
+                `;
+            }
+        }
+        
+        // Initialize button state
+        updateButtonState();
+    </script>
+</body>
+</html>
