@@ -59,6 +59,7 @@ router.post('/', async (req, res) => {
         console.log(`Attempt ID created: ${attemptId}`);
         
         const labelToNumber = { 'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8 };
+        const numberToLabel = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'G', 8: 'H' };
 
         for (const [questionId, selectedAnswer] of Object.entries(answers || {})) {
             console.log(`Processing question ID: ${questionId}, Answer: ${selectedAnswer}`);
@@ -68,15 +69,28 @@ router.post('/', async (req, res) => {
                 WHERE qo.question_id = ? AND qo.is_correct = 1
             `, [questionId]);
             
-            const numericAnswer = labelToNumber[selectedAnswer] || selectedAnswer;
             const correctLabel = correctAnswer.length > 0 ? correctAnswer[0].option_label : null;
-            const numericCorrect = correctLabel ? (labelToNumber[correctLabel] || correctLabel) : null;
-            const isCorrect = correctLabel && correctLabel === selectedAnswer ? 1 : 0;
+            
+            // Normalize selected answer to label (A, B, C, D)
+            let selectedLabel = selectedAnswer;
+            if (typeof selectedAnswer === 'number') {
+                selectedLabel = numberToLabel[selectedAnswer] || String(selectedAnswer);
+            } else if (typeof selectedAnswer === 'string') {
+                // Check if it's a number string like "2" -> convert to "B"
+                const num = parseInt(selectedAnswer);
+                if (!isNaN(num) && numberToLabel[num]) {
+                    selectedLabel = numberToLabel[num];
+                } else {
+                    selectedLabel = selectedAnswer.toUpperCase().trim();
+                }
+            }
+            
+            const isCorrect = correctLabel && correctLabel === selectedLabel ? 1 : 0;
             
             await connection.query(`
                 INSERT INTO student_responses (attempt_id, question_id, selected_answer, is_correct)
                 VALUES (?, ?, ?, ?)
-            `, [attemptId, questionId, numericAnswer, isCorrect]);
+            `, [attemptId, questionId, selectedLabel, isCorrect]);
         }
         
         console.log('Calculating performance...');
