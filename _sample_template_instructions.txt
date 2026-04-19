@@ -1,0 +1,151 @@
+===========================================================
+QUESTION PAPER TEMPLATE - INSTRUCTIONS FOR ADMIN
+===========================================================
+
+FOLLOW THIS EXACT FORMAT FOR 100% ACCURATE EXTRACTION
+Any deviation may cause extraction to fail or have wrong answers
+
+===========================================================
+STRUCTURE
+===========================================================
+
+[Section Name - General Knowledge]
+Q1. Your question here?
+A) Option A text
+B) Option B text
+C) Option C text
+D) Option D text
+Answer: B
+
+Q2. Your question here?
+A) Option A text
+B) Option B text
+C) Option C text
+D) Option D text
+Answer: A
+
+[Section Name - General Science]
+Q3. Your question here?
+A) Option A text
+B) Option B text
+C) Option C text
+D) Option D text
+Answer: C
+
+===========================================================
+FORMAT RULES - STRICT
+===========================================================
+
+1. QUESTION NUMBER: Must start with "Q1." "Q2." etc
+   ✓ CORRECT: Q1. What is the capital of India?
+   ✗ WRONG: 1. What is the capital of India?
+   ✗ WRONG: Question 1: What is the capital of India?
+
+2. OPTIONS: Must be A) B) C) D) on separate lines
+   ✓ CORRECT:
+   A) Delhi
+   B) Mumbai
+   C) Chennai
+   D) Kolkata
+
+   ✗ WRONG: A) Delhi B) Mumbai C) Chennai D) Kolkata
+   ✗ WRONG: a. Delhi b. Mumbai c. Chennai d. Kolkata
+
+3. ANSWER: Must be "Answer: X" on new line after options
+   ✓ CORRECT: Answer: B
+   ✗ WRONG: Correct Answer: B
+   ✗ WRONG: Ans: B
+
+4. SECTION: Must be in brackets [Section Name]
+   ✓ CORRECT: [General Knowledge]
+   ✗ WRONG: Section 1: General Knowledge
+
+5. SPACING: Add blank line between questions
+   - After question text
+   - After each option
+   - After answer
+
+6. NO COMBINED LINES: Don't put question and options on same line
+   - Question on its own line(s)
+   - Options each on separate line
+
+===========================================================
+IMAGE HANDLING
+===========================================================
+
+To add images to questions:
+1. Insert image in Word document BEFORE the question it belongs to
+2. Image will be automatically linked to next question
+
+Example:
+[Insert Image Here - This image will be linked to Q1]
+
+Q1. What is shown in this image?
+A) Option A
+B) Option B
+C) Option C
+D) Option D
+Answer: A
+
+===========================================================
+ANSWER KEY SECTION (Optional)
+===========================================================
+
+If you want to put all answers at end, use this format:
+
+[Answer Key]
+Q1. B
+Q2. A
+Q3. C
+
+===========================================================
+EXAMPLE COMPLETE QUESTION PAPER
+===========================================================
+
+[General Knowledge]
+Q1. What is the national animal of India?
+A) Lion
+B) Tiger
+C) Elephant
+D) Horse
+Answer: B
+
+Q2. What is the national flower of India?
+A) Rose
+B) Lotus
+C) Marigold
+D) Jasmine
+Answer: B
+
+[General Science]
+Q3. What is the chemical symbol for water?
+A) CO2
+B) H2O
+C) O2
+D) NaCl
+Answer: B
+
+Q4. What is the speed of light?
+A) 3 x 10^6 m/s
+B) 3 x 10^8 m/s
+C) 3 x 10^4 m/s
+D) 3 x 10^10 m/s
+Answer: B
+
+[Answer Key]
+Q1. B
+Q2. B
+Q3. B
+Q4. B
+
+===========================================================
+IMPORTANT NOTES
+===========================================================
+
+1. Each question MUST have exactly 4 options (A, B, C, D)
+2. Each question MUST have an answer specified
+3. Use Hindi or English - both are supported
+4. Avoid special formatting in options
+5. Keep option text simple and short
+
+===========================================================

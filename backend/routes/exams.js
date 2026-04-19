@@ -91,8 +91,8 @@ router.post('/add', upload.single('file'), async (req, res) => {
     let parsedData;
 
 if (fileExtension === 'docx' || fileExtension === 'doc') {
-      // Parse Word document with enhanced parser
-      const parser = new EnhancedQuestionParser();
+      // Parse Word document with enhanced parser (strict mode)
+      const parser = new EnhancedQuestionParser({ strictMode: true });
       parsedData = await parser.parseWordDocument(file.path);
     } else {
       return res.status(400).json({ error: "Only .docx and .doc files are supported" });
@@ -122,17 +122,32 @@ if (fileExtension === 'docx' || fileExtension === 'doc') {
     const expectedQuestionCount = Number(total_questions);
     console.log(`Question validation: Expected=${expectedQuestionCount}, Parsed=${parsedQuestionCount}`);
     
+    // Check format validation errors
+    if (parsedData.validation && !parsedData.validation.isValid) {
+      cleanupUploadedFile(file.path);
+      const formatErrors = parsedData.validation.errors.join('\n');
+      return res.status(400).json({
+        error: `Document format error! Please follow the required format.\n\n${formatErrors}\n\n${parsedData.formatGuide}`,
+        formatErrors: parsedData.validation.errors,
+        formatGuide: parsedData.formatGuide
+      });
+    }
+    
     if (parsedQuestionCount !== expectedQuestionCount) {
       if (parsedQuestionCount > 0) {
         cleanupUploadedFile(file.path);
-        return res.status(400).json({ 
-          error: `Question count mismatch! Expected ${expectedQuestionCount} questions but extracted ${parsedQuestionCount} questions from the file. Please check your document format and try again.`,
+        return res.status(400).json({
+          error: `Question count mismatch!\nExpected: ${expectedQuestionCount} questions\nExtracted: ${parsedQuestionCount} questions\n\nPlease check your document format and try again.`,
           expected: expectedQuestionCount,
-          parsed: parsedQuestionCount
+          parsed: parsedQuestionCount,
+          formatGuide: parsedData.formatGuide
         });
       } else {
         cleanupUploadedFile(file.path);
-        return res.status(400).json({ error: 'No questions could be extracted from the document. Please check the document format.' });
+        return res.status(400).json({
+          error: 'No questions could be extracted from the document!\n\nPlease follow the required format:\n' + parsedData.formatGuide,
+          formatGuide: parsedData.formatGuide
+        });
       }
     }
 

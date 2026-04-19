@@ -4,13 +4,16 @@ const path = require('path');
 const AdmZip = require('adm-zip');
 
 class EnhancedQuestionParser {
-    constructor() {
+    constructor(options = {}) {
+        this.strictMode = options.strictMode !== false;
         this.sections = [];
         this.currentSection = null;
         this.currentQuestion = null;
         this.questions = [];
         this.answerKeyMap = new Map();
         this.extractedImages = [];
+        this.errors = [];
+        this.warnings = [];
     }
 
     async parseWordDocument(filePath) {
@@ -37,9 +40,18 @@ class EnhancedQuestionParser {
             
             this.linkImagesToQuestions();
             
+            // Validate format if in strict mode
+            let validation = null;
+            if (this.strictMode) {
+                validation = this.validateStrictFormat();
+            }
+            
             return {
                 sections: this.sections,
-                questions: this.questions
+                questions: this.questions,
+                extractedImages: this.extractedImages,
+                validation: validation,
+                formatGuide: this.getFormatGuide()
             };
             
         } catch (error) {
@@ -99,6 +111,69 @@ class EnhancedQuestionParser {
                 imageIndex++;
             }
         }
+    }
+    
+    validateStrictFormat() {
+        this.errors = [];
+        this.warnings = [];
+        
+        for (let i = 0; i < this.questions.length; i++) {
+            const q = this.questions[i];
+            const qNum = i + 1;
+            
+            if (!q.question_text || q.question_text.trim() === '') {
+                this.errors.push(`Q${qNum}: Missing question text`);
+            }
+            
+            if (!q.options || q.options.length !== 4) {
+                this.errors.push(`Q${qNum}: Must have exactly 4 options (found ${q.options?.length || 0})`);
+            }
+            
+            if (!q.correct_answer) {
+                this.errors.push(`Q${qNum}: No answer specified`);
+            }
+        }
+        
+        if (this.questions.length > 0) {
+            const questionsWithoutAnswer = this.questions.filter(q => !q.correct_answer).length;
+            if (questionsWithoutAnswer > 0) {
+                this.warnings.push(`${questionsWithoutAnswer} questions without answer - will use answer key if provided`);
+            }
+        }
+        
+        return {
+            isValid: this.errors.length === 0,
+            errors: this.errors,
+            warnings: this.warnings
+        };
+    }
+    
+    getFormatGuide() {
+        return `
+===========================================================
+REQUIRED FORMAT FOR WORD DOCUMENT
+===========================================================
+
+1. Each question MUST start with "Q1." "Q2." etc
+   Example: Q1. What is the capital of India?
+
+2. Each question MUST have exactly 4 options (A, B, C, D)
+   Example:
+   A) Delhi
+   B) Mumbai
+   C) Chennai
+   D) Kolkata
+
+3. Answer MUST be on new line after options
+   Example: Answer: B
+
+4. Sections MUST be in brackets [Section Name]
+   Example: [General Knowledge]
+
+5. IMPORTANT: Put each option on SEPARATE LINE
+   - DO NOT put all options on one line
+
+===========================================================`;
     }
 
     parseDocumentContent(text) {
