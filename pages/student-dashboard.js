@@ -35,11 +35,10 @@ export default function StudentDashboard() {
         if (attemptedExamIds.includes(exam.exam_id)) {
           return { ...exam, exam_status: 'Completed' };
         }
-        // If the exam date is in the future, mark as Scheduled
-        const examDate = new Date(exam.exam_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (examDate > today) {
+        // Check if exam can be taken now (date AND time must both be passed)
+        const examDateTime = new Date(`${exam.exam_date} ${exam.exam_time}`);
+        const now = new Date();
+        if (examDateTime > now) {
           return { ...exam, exam_status: 'Scheduled' };
         }
         return { ...exam, exam_status: exam.exam_status || 'Available' };
