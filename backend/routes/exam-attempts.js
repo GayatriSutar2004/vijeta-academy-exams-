@@ -231,11 +231,13 @@ router.get('/:attemptId', async (req, res) => {
             return res.status(404).json({ error: 'Attempt not found' });
         }
         
+        const labelToNumber = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
+        const numberToLabel = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+        
         const [responses] = await db.query(`
             SELECT 
                 sr.question_id,
                 sr.selected_answer,
-                sr.is_correct,
                 q.question_text,
                 q.marks,
                 q.explanation_text,
@@ -258,33 +260,41 @@ router.get('/:attemptId', async (req, res) => {
             ORDER BY sr.question_id
         `, [attemptId]);
         
-        const [performanceResult] = await db.query(`
-            SELECT
-                COUNT(*) as attempted_questions,
-                COALESCE(SUM(sr.is_correct), 0) as correct_answers,
-                COALESCE(SUM(CASE WHEN sr.is_correct = 1 THEN q.marks ELSE 0 END), 0) as marks_obtained
-            FROM student_responses sr
-            JOIN questions q ON sr.question_id = q.question_id
-            WHERE sr.attempt_id = ?
-        `, [attemptId]);
-
-        const attemptPerformance = performanceResult[0];
-        const totalQuestions = Number(attempt[0].total_questions || responses.length);
-        const correctAnswers = Number(attemptPerformance.correct_answers || 0);
-        const maxMarks = totalQuestions; // Each question has 1 mark by default
-        const percentage = maxMarks > 0
-            ? (correctAnswers / maxMarks) * 100
-            : 0;
+        // Recalculate is_correct dynamically to fix old data
+        const processedResponses = responses.map(response => {
+            let selectedLabel = response.selected_answer;
+            if (typeof selectedLabel === 'number') {
+                selectedLabel = numberToLabel[selectedLabel] || String(selectedLabel);
+            } else if (typeof selectedLabel === 'string') {
+                const num = parseInt(selectedLabel);
+                if (!isNaN(num) && numberToLabel[num]) {
+                    selectedLabel = numberToLabel[num];
+                } else {
+                    selectedLabel = selectedLabel.toUpperCase().trim();
+                }
+            }
+            const correctLabel = response.correct_option_label;
+            const isCorrect = correctLabel && correctLabel === selectedLabel ? 1 : 0;
+            return { ...response, is_correct: isCorrect };
+        });
+        
+        const correctAnswers = processedResponses.filter(r => r.is_correct === 1).length;
+        const attemptedQuestions = processedResponses.length;
+        const marksObtained = correctAnswers;
+        
+        const totalQuestions = Number(attempt[0].total_questions || attemptedQuestions);
+        const percentage = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
         
         res.json({
             attempt: attempt[0],
-            responses: responses,
+            responses: processedResponses,
             performance: {
-                total_questions: Number(attempt[0].total_questions || 0),
-                attempted_questions: Number(attemptPerformance.attempted_questions || 0),
-                correct_answers: Number(attemptPerformance.correct_answers || 0),
-                total_marks: Number(attemptPerformance.marks_obtained || 0),
-                max_marks: maxMarks,
+                total_questions: totalQuestions,
+                attempted_questions: attemptedQuestions,
+                correct_answers: correctAnswers,
+                wrong_answers: attemptedQuestions - correctAnswers,
+                total_marks: marksObtained,
+                max_marks: totalQuestions,
                 percentage: percentage.toFixed(2)
             }
         });
