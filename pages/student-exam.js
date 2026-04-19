@@ -362,9 +362,12 @@ const getFullscreenElement = () =>
 
     const startExam = async () => {
         setError('');
-        const enteredFullscreen = await requestFullscreen();
-        if (!enteredFullscreen) {
-            return;
+        
+        // Try fullscreen but continue even if it fails
+        try {
+            await requestFullscreen();
+        } catch (e) {
+            console.log('Fullscreen not available, continuing anyway');
         }
 
         setWarningMessage('');
