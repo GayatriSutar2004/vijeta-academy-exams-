@@ -85,46 +85,21 @@ router.post('/add', upload.single('file'), async (req, res) => {
     // First, insert the exam
     const creatorId = Number(created_by) || 1;
 
-    const [result] = await db.query(
-      `INSERT INTO exams (exam_name, duration_minutes, total_questions, exam_type_id, exam_type, target_batch_name, target_admission_year, exam_date, exam_time, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-      [
-        exam_name, 
-        duration_minutes, 
-        total_questions, 
-        examTypeId, 
-        exam_type || 'NDA', 
-        target_batch_name || null,
-        target_admission_year ? Number(target_admission_year) : null,
-        exam_date || new Date().toISOString().split('T')[0], 
-        exam_time || '09:00:00', 
-        creatorId
-      ]
-    );
-    const examId = result.insertId;
-
-    // Now parse the file based on extension
+    // Parse file first (for Word documents only)
     const fileExtension = file.originalname.split('.').pop().toLowerCase();
     
     let parsedData;
 
-    if (fileExtension === 'docx' || fileExtension === 'doc') {
+if (fileExtension === 'docx' || fileExtension === 'doc') {
       // Parse Word document with enhanced parser
       const parser = new EnhancedQuestionParser();
       parsedData = await parser.parseWordDocument(file.path);
-    } else if (fileExtension === 'txt') {
-      // Parse text file with enhanced parser
-      const parser = new EnhancedQuestionParser();
-      const text = fs.readFileSync(file.path, 'utf8');
-      parser.parseDocumentContent(text);
-      parsedData = {
-        sections: parser.sections,
-        questions: parser.questions
-      };
     } else {
-      return res.status(400).json({ error: "Unsupported file type. Please upload .docx, .doc, or .txt files." });
+      return res.status(400).json({ error: "Only .docx and .doc files are supported" });
     }
 
-    if (!parsedData.questions.length && (fileExtension === 'docx' || fileExtension === 'doc')) {
+    // Run fallback parser if no questions found
+    if (!parsedData.questions.length) {
       console.log('Primary parse returned 0 questions. Running fallback parser on raw text.');
       const fallbackText = (await mammoth.extractRawText({ path: file.path })).value;
       const fallbackParser = new EnhancedQuestionParser();
@@ -142,19 +117,42 @@ router.post('/add', upload.single('file'), async (req, res) => {
       };
     }
 
-    if (!parsedData.questions.length) {
-      const previewText = fileExtension === 'txt'
-        ? fs.readFileSync(file.path, 'utf8')
-        : (await mammoth.extractRawText({ path: file.path })).value;
-
-      cleanupUploadedFile(file.path);
-      return res.status(400).json({
-        error: 'No questions could be extracted from the uploaded file.',
-        preview: previewText.substring(0, 400)
-      });
+    // Validate: Compare parsed questions with admin's expected total
+    const parsedQuestionCount = parsedData.questions.length;
+    const expectedQuestionCount = Number(total_questions);
+    console.log(`Question validation: Expected=${expectedQuestionCount}, Parsed=${parsedQuestionCount}`);
+    
+    if (parsedQuestionCount !== expectedQuestionCount) {
+      if (parsedQuestionCount > 0) {
+        cleanupUploadedFile(file.path);
+        return res.status(400).json({ 
+          error: `Question count mismatch! Expected ${expectedQuestionCount} questions but extracted ${parsedQuestionCount} questions from the file. Please check your document format and try again.`,
+          expected: expectedQuestionCount,
+          parsed: parsedQuestionCount
+        });
+      } else {
+        cleanupUploadedFile(file.path);
+        return res.status(400).json({ error: 'No questions could be extracted from the document. Please check the document format.' });
+      }
     }
 
-    await insertParsedQuestions(parsedData, examId, file.path, res, {
+    // Only create exam if validation passes
+    const [result] = await db.query(
+      `INSERT INTO exams (exam_name, duration_minutes, total_questions, exam_type_id, exam_type, target_batch_name, target_admission_year, exam_date, exam_time, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+      [
+        exam_name, 
+        duration_minutes, 
+        total_questions, 
+        examTypeId, 
+        exam_type || 'NDA', 
+        target_batch_name || null,
+        target_admission_year ? Number(target_admission_year) : null,
+        exam_date || new Date().toISOString().split('T')[0], 
+        exam_time || '09:00:00', 
+        creatorId
+      ]
+    );
+    const examId = result.insertId;
       examType: exam_type || 'NDA',
       targetBatchName: target_batch_name || '',
       targetAdmissionYear: target_admission_year || ''
