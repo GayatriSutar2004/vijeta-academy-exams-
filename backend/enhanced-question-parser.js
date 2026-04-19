@@ -131,6 +131,12 @@ class EnhancedQuestionParser {
             else if (this.isQuestionStart(line)) {
                 this.startNewQuestion(line);
             }
+            else if (this.isCombinedOptionLine(line)) {
+                // Handle combined option lines that come right after question text (no newline between)
+                if (this.currentQuestion) {
+                    this.addOption(line);
+                }
+            }
             else if (this.isOption(line)) {
                 this.addOption(line);
             }
@@ -192,6 +198,24 @@ class EnhancedQuestionParser {
     }
 
     isQuestionStart(line) {
+        // Check if this has option marker AND question number prefix - both are present
+        // This handles "Q5. question text A) option" format (question + options on same line)
+        if (this.hasQuestionPrefix(line) && this.hasOptionMarkers(line)) {
+            // Split into question text and options
+            return true;
+        }
+        
+        // Check if this is a combined option line ONLY (no question) - if so, NOT a question start
+        if (this.hasOptionMarkers(line) && !this.hasQuestionPrefix(line)) {
+            return false;
+        }
+        
+        // Check if this is an option line starting with A) B) C) D) - if so, NOT a question start
+        const optionStartPattern = /^[A-D]\)\s*/i;
+        if (optionStartPattern.test(line)) {
+            return false;
+        }
+        
         // More flexible patterns for question detection
         const questionPatterns = [
             /^Q\.?\s*\d+/i,
@@ -203,7 +227,8 @@ class EnhancedQuestionParser {
             /^\[\d+\]\s*/i,
             /^QNO\s*\.?\s*\d+/i,
             /^QUESTION\s*NO\s*\.?\s*\d+/i,
-            /^\d+\.\s+\w/  // e.g., "1. What is..." - questions starting with number followed by text
+            /^\d+\.\s+\w/,
+            /^Q\d+[\.\)]\s+\w/
         ];
         
         if (questionPatterns.some(pattern => pattern.test(line)) && !this.isSectionHeader(line)) {
@@ -216,6 +241,27 @@ class EnhancedQuestionParser {
         }
         
         return false;
+    }
+    
+    hasQuestionPrefix(line) {
+        return /^Q\.?\s*\d+/i.test(line) || /^Q\s*\.\s*\d+/i.test(line);
+    }
+    
+    hasOptionMarkers(line) {
+        const a = line.indexOf('A)');
+        const b = line.indexOf('B)');
+        const c = line.indexOf('C)');
+        const d = line.indexOf('D)');
+        return a !== -1 && b !== -1 && c !== -1 && d !== -1;
+    }
+    
+    isCombinedOptionLine(line) {
+        const str = line;
+        const a = str.indexOf('A)');
+        const b = str.indexOf('B)');
+        const c = str.indexOf('C)');
+        const d = str.indexOf('D)');
+        return a !== -1 && b !== -1 && c !== -1 && d !== -1 && a < b && b < c && c < d;
     }
 
     isOption(line) {
@@ -280,47 +326,6 @@ class EnhancedQuestionParser {
         
         return answerPatterns.some(pattern => pattern.test(line));
     }
-            /^\([A-D]\)\s*/i,
-            /^[a-d]\)\s*/i,
-            /^[a-d]\.\s*/i,
-            /^Option\s*[A-D]/i,
-            /^Ans\s*[A-D]/i,
-            /^[A-D]\s*\)/i,
-            /^[A-D]\s*\./i,
-            /^\s*[A-D]\s*[\.\)]\s*/i,
-            /^\(\s*[A-D]\s*\)\s*/i,
-            /^\s*\[\s*[A-D]\s*\]\s*/i
-        ];
-        
-        if (optionPatterns.some(pattern => pattern.test(line))) {
-            return true;
-        }
-        
-        const flexibleOptionPattern = /^\s*[A-Da-d]\s*[\.\)\:\-]\s*\w/;
-        if (flexibleOptionPattern.test(line)) {
-            return true;
-        }
-        
-        return false;
-    }
-
-    isCorrectAnswer(line) {
-        const answerPatterns = [
-            /^Correct\s*[:\-]/i,
-            /^Answer\s*[:\-]/i,
-            /^Ans\s*[:\-]/i,
-            /^Solution\s*[:\-]/i,
-            /^[A-D]\s*is\s*correct/i,
-            /^The\s*correct\s*answer\s*is/i,
-            /^Ans\s*\.\s*[A-D]/i,
-            /^Correct\s*Ans\s*[:\-]/i,
-            /^Right\s*Ans/i,
-            /^\s*[A-D]\s+Correct/i,
-            /^\s*Correct\s+[A-D]/i
-        ];
-        
-        return answerPatterns.some(pattern => pattern.test(line));
-    }
 
     isAnswerKeyHeader(line) {
         return /^(Answer\s*Key|AnswerKey|Anser\s*Key|AnserKey)\s*[:\-]*/i.test(line);
@@ -355,6 +360,12 @@ class EnhancedQuestionParser {
     startNewQuestion(line) {
         this.finalizeCurrentQuestion();
 
+        // Check if question and options are on the same line (e.g., "Q5. question A) opt1B) opt2C) opt3D) opt4")
+        if (this.hasOptionMarkers(line) && this.hasQuestionPrefix(line)) {
+            this.parseInlineQuestion(line);
+            return;
+        }
+
         const parsedQuestion = this.extractQuestionMetadata(line);
         
         this.currentQuestion = {
@@ -367,6 +378,43 @@ class EnhancedQuestionParser {
         };
         
         console.log('Started new question:', line.substring(0, 50));
+    }
+    
+    parseInlineQuestion(line) {
+        // Extract question number and text from "Q5. question text" pattern
+        let number = null;
+        let questionText = line;
+        
+        const numMatch = line.match(/Q\.?\s*(\d+)/i);
+        if (numMatch) {
+            number = parseInt(numMatch[1]);
+        }
+        
+        // Extract question text: everything after Q{number}. until first A)
+        const qTextMatch = line.match(/Q\.?\s*\d+[\.\)]?\s*(.+?)A\)/i);
+        if (qTextMatch) {
+            questionText = qTextMatch[1].trim();
+        }
+        
+        // Now parse options from the same line
+        const segments = [];
+        const segmentRegex = /([A-D])\)\s*([^(A-D)]+)/gi;
+        let match;
+        while ((match = segmentRegex.exec(line)) !== null) {
+            segments.push({ label: match[1].toUpperCase(), text: match[2].trim() });
+        }
+        
+        this.currentQuestion = {
+            question_number: number,
+            question_text: questionText,
+            options: segments,
+            correct_answer: null,
+            explanation: null,
+            section: this.currentSection ? this.currentSection.name : 'General'
+        };
+        
+        console.log('Started inline question Q' + number + ':', questionText.substring(0, 30));
+        console.log('Added', segments.length, 'inline options:', segments.map(s => s.label).join(','));
     }
 
     addOption(line) {
