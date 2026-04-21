@@ -500,4 +500,26 @@ router.put('/:examId', async (req, res) => {
   }
 });
 
+// Toggle result publication
+router.put('/:examId/publish-result', async (req, res) => {
+  const examId = req.params.examId;
+  const { publish } = req.body;
+  
+  try {
+    await db.query(
+      `UPDATE exams SET result_published = ? WHERE exam_id = ?`,
+      [publish ? 1 : 0, examId]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: publish ? 'Results published successfully' : 'Results unpublished',
+      result_published: publish
+    });
+  } catch(err) {
+    console.log("DB ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

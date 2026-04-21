@@ -247,6 +247,26 @@ export default function AdminDashboard() {
     setEditMode(true);
   };
 
+  const togglePublishResult = async (examId, currentStatus) => {
+    const newStatus = !currentStatus;
+    try {
+      const res = await fetch(`https://vijeta-api.onrender.com/api/exams/${examId}/publish-result`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publish: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh exams list
+        fetchExams();
+        alert(data.message);
+      }
+    } catch (err) {
+      console.error('Error toggling result publish:', err);
+      alert('Error updating result visibility');
+    }
+  };
+
   const handleDeleteExam = async (examId) => {
     if (!window.confirm("Are you sure you want to delete this exam? This action cannot be undone.")) {
       return;
@@ -1484,7 +1504,21 @@ export default function AdminDashboard() {
                           <td>{exam.exam_time}</td>
                           <td>{exam.duration_minutes} min</td>
                           <td>{exam.total_questions}</td>
-                          <td>
+                          <td style={{ display: 'flex', gap: '5px' }}>
+                            <button 
+                              onClick={() => togglePublishResult(exam.exam_id, exam.result_published)}
+                              style={{ 
+                                background: exam.result_published ? '#28a745' : '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              {exam.result_published ? '🔴 Published' : '🔴 Hide'}
+                            </button>
                             <button onClick={() => handleEditExam(exam)}>Edit</button>
                           </td>
                         </tr>

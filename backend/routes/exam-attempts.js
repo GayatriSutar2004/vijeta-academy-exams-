@@ -220,7 +220,7 @@ router.get('/:attemptId', async (req, res) => {
     
     try {
         const [attempt] = await db.query(`
-            SELECT ea.*, s.student_name, s.roll_no, e.exam_name, e.exam_type
+            SELECT ea.*, s.student_name, s.roll_no, e.exam_name, e.exam_type, e.result_published
             FROM exam_attempts ea
             JOIN students s ON ea.student_id = s.student_id
             JOIN exams e ON ea.exam_id = e.exam_id
@@ -229,6 +229,14 @@ router.get('/:attemptId', async (req, res) => {
         
         if (attempt.length === 0) {
             return res.status(404).json({ error: 'Attempt not found' });
+        }
+        
+        // Check if result is published
+        if (!attempt[0].result_published) {
+            return res.status(403).json({ 
+                error: 'Results not yet published',
+                message: 'The admin has not published the results for this exam yet. Please check back later.'
+            });
         }
         
         const labelToNumber = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
