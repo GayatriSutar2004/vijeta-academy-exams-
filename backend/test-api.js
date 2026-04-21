@@ -1,37 +1,65 @@
-const http = require('http');
+const https = require('https');
 
-async function testAPIs() {
-    console.log('=== TESTING BACKEND APIS ===');
-    
-    try {
-        // Test admin results endpoint
-        console.log('\n1. Testing Admin Results API...');
-        const adminResponse = await fetch('http://localhost:3001/api/admin-results');
-        const adminData = await adminResponse.json();
-        console.log('Admin Results Status:', adminResponse.status);
-        console.log('Results Count:', adminData.length);
-        
-        // Test student exams endpoint
-        console.log('\n2. Testing Student Exams API...');
-        const studentResponse = await fetch('http://localhost:3001/api/student-exams/available/1');
-        const studentData = await studentResponse.json();
-        console.log('Student Exams Status:', studentResponse.status);
-        console.log('Available Exams:', studentData.available_exams?.length || 0);
-        
-        // Test exam questions endpoint
-        console.log('\n3. Testing Exam Questions API...');
-        const examResponse = await fetch('http://localhost:3001/api/exams/1/questions');
-        const examData = await examResponse.json();
-        console.log('Exam Questions Status:', examResponse.status);
-        console.log('Questions Count:', examData.length);
-        
-        console.log('\n=== API TESTING COMPLETED ===');
-        process.exit(0);
-        
-    } catch (error) {
-        console.error('API Testing Error:', error);
-        process.exit(1);
-    }
+function fetchAPI(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch(e) {
+          resolve({ error: data });
+        }
+      });
+    }).on('error', reject);
+  });
 }
 
-testAPIs();
+async function test() {
+  console.log('=== TESTING REMOTE API ===\n');
+  
+  // Test student results
+  console.log('1. Student Results (attempt 13)...');
+  try {
+    const result = await fetchAPI('https://vijeta-api.onrender.com/api/exam-attempts/13');
+    console.log('   ✓ Exam:', result.attempt?.exam_name);
+    console.log('   ✓ Student:', result.attempt?.student_name);
+    console.log('   ✓ Total:', result.performance?.total_questions);
+    console.log('   ✓ Correct:', result.performance?.correct_answers);
+    console.log('   ✓ Wrong:', result.performance?.wrong_answers);
+    console.log('   ✓ Percentage:', result.performance?.percentage, '%');
+    
+    // Sample questions (convert stored answers to display)
+    const numberToLabel = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+    console.log('\n   Sample Questions:');
+    result.responses?.slice(0, 5).forEach((r, i) => {
+      const status = r.is_correct ? '✓ Correct' : '✗ Wrong';
+      const yourAns = typeof r.selected_answer === 'number' ? numberToLabel[r.selected_answer] || r.selected_answer : r.selected_answer;
+      console.log(`   Q${i+1}: ${status} | Your: ${yourAns} | Correct: ${r.correct_option_label}`);
+    });
+    
+    console.log('\n   Full Stats:');
+    console.log('   Correct (recounted):', correctRecount);
+    console.log('   Wrong (recounted):', wrongRecount);
+  } catch(e) {
+    console.log('   ✗ Error:', e.message);
+  }
+  
+  // Test admin results
+  console.log('\n2. Admin Results List...');
+  try {
+    const adminResults = await fetchAPI('https://vijeta-api.onrender.com/api/admin-results');
+    console.log('   ✓ Total Results:', adminResults.length);
+    if (adminResults.length > 0) {
+      const r = adminResults[0];
+      console.log('   ✓ Sample:', r.exam_name, '-', r.student_name, '-', r.percentage, '%');
+    }
+  } catch(e) {
+    console.log('   ✗ Error:', e.message);
+  }
+  
+  console.log('\n=== TESTS COMPLETE ===');
+}
+
+test();

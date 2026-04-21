@@ -232,7 +232,27 @@ router.get('/:attemptId', async (req, res) => {
         }
         
         const labelToNumber = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
+        // 1-based: 1=A, 2=B, 3=C, 4=D
+// 1-based: 1=A, 2=B, 3=C, 4=D
         const numberToLabel = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+        
+        // Convert answer to label format for comparison
+        const normalizeAnswer = (answer) => {
+            if (answer === null || answer === undefined) return null;
+            if (typeof answer === 'number') {
+                return numberToLabel[answer] || String(answer);
+            }
+            if (typeof answer === 'string') {
+                const trimmed = answer.toUpperCase().trim();
+                // Check if it's already A,B,C,D
+                if (['A','B','C','D','E'].includes(trimmed)) return trimmed;
+                // Check if it's a number string
+                const num = parseInt(trimmed);
+                if (!isNaN(num) && numberToLabel[num]) return numberToLabel[num];
+                return trimmed;
+            }
+            return String(answer);
+        };
         
         const [responses] = await db.query(`
             SELECT 
@@ -262,19 +282,9 @@ router.get('/:attemptId', async (req, res) => {
         
         // Recalculate is_correct dynamically to fix old data
         const processedResponses = responses.map(response => {
-            let selectedLabel = response.selected_answer;
-            if (typeof selectedLabel === 'number') {
-                selectedLabel = numberToLabel[selectedLabel] || String(selectedLabel);
-            } else if (typeof selectedLabel === 'string') {
-                const num = parseInt(selectedLabel);
-                if (!isNaN(num) && numberToLabel[num]) {
-                    selectedLabel = numberToLabel[num];
-                } else {
-                    selectedLabel = selectedLabel.toUpperCase().trim();
-                }
-            }
+            const selectedLabel = normalizeAnswer(response.selected_answer);
             const correctLabel = response.correct_option_label;
-            const isCorrect = correctLabel && correctLabel === selectedLabel ? 1 : 0;
+            const isCorrect = (selectedLabel && correctLabel && selectedLabel === correctLabel) ? 1 : 0;
             return { ...response, is_correct: isCorrect };
         });
         
