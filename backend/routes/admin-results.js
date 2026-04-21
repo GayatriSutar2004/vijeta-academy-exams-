@@ -59,15 +59,42 @@ const resultListQuery = `
 router.get('/', async (req, res) => {
     try {
         const [results] = await db.query(`
-            ${resultListQuery}
+            SELECT
+                ea.attempt_id,
+                ea.student_id,
+                s.student_name,
+                s.roll_no,
+                e.exam_id,
+                e.exam_name,
+                e.exam_type,
+                ea.submitted_at,
+                ea.total_questions,
+                (
+                    SELECT COUNT(*) FROM student_responses sr WHERE sr.attempt_id = ea.attempt_id
+                ) AS attempted_questions,
+                (
+                    SELECT COALESCE(SUM(sr.is_correct), 0)
+                    FROM student_responses sr
+                    WHERE sr.attempt_id = ea.attempt_id
+                ) AS correct_answers
+            FROM exam_attempts ea
+            JOIN students s ON ea.student_id = s.student_id
+            JOIN exams e ON ea.exam_id = e.exam_id
             ORDER BY COALESCE(ea.submitted_at, ea.end_time, ea.start_time) DESC, ea.attempt_id DESC
         `);
 
-        res.json(results.map((result) => ({
-            ...result,
-            percentage: Number(result.percentage || 0),
-            result_status: Number(result.percentage || 0) >= 40 ? 'Pass' : 'Fail'
-        })));
+        res.json(results.map((result) => {
+            const attempted = Number(result.attempted_questions || 0);
+            const correct = Number(result.correct_answers || 0);
+            const percentage = attempted > 0 ? (correct / attempted) * 100 : 0;
+            return {
+                ...result,
+                percentage: percentage.toFixed(2),
+                correct_answers: correct,
+                wrong_answers: attempted - correct,
+                result_status: percentage >= 40 ? 'Pass' : 'Fail'
+            };
+        }));
     } catch (error) {
         console.error('Error fetching admin results:', error);
         res.status(500).json({ error: error.message });
@@ -88,11 +115,12 @@ router.get('/:attemptId', async (req, res) => {
             return res.status(404).json({ error: 'Result not found' });
         }
 
+        const numberToLabel = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+        
         const [responses] = await db.query(`
             SELECT
                 sr.question_id,
                 sr.selected_answer,
-                sr.is_correct,
                 q.question_text,
                 q.marks,
                 q.explanation_text,
@@ -121,13 +149,38 @@ router.get('/:attemptId', async (req, res) => {
             ORDER BY sr.question_id
         `, [attemptId]);
         
+        // Recalculate is_correct to fix old data
+        const processedResponses = responses.map(response => {
+            let selectedLabel = response.selected_answer;
+            if (typeof selectedLabel === 'number') {
+                selectedLabel = numberToLabel[selectedLabel] || String(selectedLabel);
+            } else if (typeof selectedLabel === 'string') {
+                const num = parseInt(selectedLabel);
+                if (!isNaN(num) && numberToLabel[num]) {
+                    selectedLabel = numberToLabel[num];
+                } else {
+                    selectedLabel = selectedLabel.toUpperCase().trim();
+                }
+            }
+            const correctLabel = response.correct_option_label;
+            const isCorrect = correctLabel && correctLabel === selectedLabel ? 1 : 0;
+            return { ...response, is_correct: isCorrect };
+        });
+        
+        // Recalculate percentage from processed responses
+        const correctAnswers = processedResponses.filter(r => r.is_correct === 1).length;
+        const attemptedQuestions = processedResponses.length;
+        const percentage = attemptedQuestions > 0 ? (correctAnswers / attemptedQuestions) * 100 : 0;
+        
         res.json({
             result: {
                 ...result[0],
-                percentage: Number(result[0].percentage || 0),
-                result_status: Number(result[0].percentage || 0) >= 40 ? 'Pass' : 'Fail'
+                percentage: percentage.toFixed(2),
+                correct_answers: correctAnswers,
+                wrong_answers: attemptedQuestions - correctAnswers,
+                result_status: percentage >= 40 ? 'Pass' : 'Fail'
             },
-            responses: responses.map((response) => ({
+            responses: processedResponses.map((response) => ({
                 ...response,
                 options: response.options_text ? response.options_text.split('|') : []
             }))

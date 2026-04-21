@@ -196,14 +196,14 @@ export default function ExamResult() {
                                 
                                 <div className={styles.answerDetails}>
                                     <div className={styles.selectedAnswer}>
-                                        <strong>Your Answer:</strong> {response.correct_option_label ? response.correct_option_label : response.selected_answer}
+                                        <strong>Your Answer:</strong> {response.selected_answer || 'Not Attempted'}
                                     </div>
                                     <div className={styles.correctAnswer}>
                                         <strong>Correct Answer:</strong> {response.correct_option_label || response.correct_option_text}
                                     </div>
-                                    {response.explanation && (
+                                    {response.explanation_text && (
                                         <div className={styles.explanation}>
-                                            <strong>Explanation:</strong> {response.explanation}
+                                            <strong>Explanation:</strong> {response.explanation_text}
                                         </div>
                                     )}
                                 </div>
