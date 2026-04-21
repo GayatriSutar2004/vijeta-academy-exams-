@@ -506,6 +506,16 @@ router.put('/:examId/publish-result', async (req, res) => {
   const { publish } = req.body;
   
   try {
+    // First ensure the column exists (auto-migrate)
+    try {
+      await db.query(`ALTER TABLE exams ADD COLUMN result_published TINYINT(1) DEFAULT 0`);
+    } catch (e) { /* ignore if exists */ }
+    
+    // Default to published for existing exams if column was just added
+    if (publish === undefined) {
+      await db.query(`UPDATE exams SET result_published = 1 WHERE result_published IS NULL OR result_published = 0`);
+    }
+    
     await db.query(
       `UPDATE exams SET result_published = ? WHERE exam_id = ?`,
       [publish ? 1 : 0, examId]

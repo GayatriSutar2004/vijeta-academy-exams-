@@ -231,8 +231,9 @@ router.get('/:attemptId', async (req, res) => {
             return res.status(404).json({ error: 'Attempt not found' });
         }
         
-        // Check if result is published
-        if (!attempt[0].result_published) {
+        // Check if result is published (default to true if column doesn't exist)
+        const isPublished = attempt[0].result_published !== 0 && attempt[0].result_published !== false;
+        if (attempt[0].result_published === 0) {
             return res.status(403).json({ 
                 error: 'Results not yet published',
                 message: 'The admin has not published the results for this exam yet. Please check back later.'
