@@ -29,6 +29,23 @@ app.use('/api/student-exams', studentExamRoutes);
 app.use('/api/exam-attempts', examAttemptsRoutes);
 app.use('/api/admin-results', adminResultsRoutes);
 
+// Root route - API is running
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Vijeta API is running',
+    version: '1.0.0',
+    endpoints: [
+      '/api/students',
+      '/api/exams',
+      '/api/admin',
+      '/api/results',
+      '/api/student-exams',
+      '/api/exam-attempts',
+      '/api/admin-results'
+    ]
+  });
+});
+
 // Test route
 app.get('/test', (req, res) => {
   res.json({ message: 'Server is running' });
