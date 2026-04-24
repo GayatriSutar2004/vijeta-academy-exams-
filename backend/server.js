@@ -1,12 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const port = 3001;
+
+// Use PORT from environment (Render sets this) or default to 5000
+const PORT = process.env.PORT || 5000;
+const LOCAL_PORT = process.env.LOCAL_PORT || 3001;
+const usePort = process.env.RENDER ? PORT : LOCAL_PORT;
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // JSON parsing
-app.use(express.urlencoded({ extended: true })); // URL-encoded parsing
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Database connection
 const db = require('./db');
@@ -14,7 +18,7 @@ console.log("DB required:", typeof db);
 
 // Routes
 const studentRoutes = require('./routes/students');
-const examRoutes = require('./routes/exams'); // exams route
+const examRoutes = require('./routes/exams');
 const adminRoutes = require('./routes/admin');
 const resultRoutes = require('./routes/results');
 const studentExamRoutes = require('./routes/student-exams');
@@ -52,7 +56,7 @@ app.get('/test', (req, res) => {
 });
 
 // ✅ Start server
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-  console.log("Server started successfully");
+app.listen(usePort, () => {
+  console.log(`Server running on http://localhost:${usePort}`);
+  console.log(`Environment: ${process.env.RENDER ? 'Render' : 'Local'}`);
 });
