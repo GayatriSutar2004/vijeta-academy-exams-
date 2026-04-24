@@ -1,37 +1,20 @@
 const express = require('express');
 const cors = require('cors');
+
 const app = express();
 
-// Use PORT from environment (Render sets this) or default to 5000
+// Use PORT from environment (Render sets this), default to 5000
 const PORT = process.env.PORT || 5000;
-const LOCAL_PORT = process.env.LOCAL_PORT || 3001;
-const usePort = process.env.RENDER ? PORT : LOCAL_PORT;
+
+console.log('========================================');
+console.log('Starting Vijeta API Server...');
+console.log('PORT:', PORT);
+console.log('========================================');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Database connection
-const db = require('./db');
-console.log("DB required:", typeof db);
-
-// Routes
-const studentRoutes = require('./routes/students');
-const examRoutes = require('./routes/exams');
-const adminRoutes = require('./routes/admin');
-const resultRoutes = require('./routes/results');
-const studentExamRoutes = require('./routes/student-exams');
-const examAttemptsRoutes = require('./routes/exam-attempts');
-const adminResultsRoutes = require('./routes/admin-results');
-
-app.use('/api/students', studentRoutes);
-app.use('/api/exams', examRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/results', resultRoutes);
-app.use('/api/student-exams', studentExamRoutes);
-app.use('/api/exam-attempts', examAttemptsRoutes);
-app.use('/api/admin-results', adminResultsRoutes);
 
 // Root route - API is running
 app.get('/', (req, res) => {
@@ -55,8 +38,45 @@ app.get('/test', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
-// ✅ Start server
-app.listen(usePort, () => {
-  console.log(`Server running on http://localhost:${usePort}`);
-  console.log(`Environment: ${process.env.RENDER ? 'Render' : 'Local'}`);
+// Load and register routes
+try {
+  console.log('Loading database module...');
+  const db = require('./db');
+  console.log('Loading routes...');
+  
+  app.use('/api/students', require('./routes/students'));
+  app.use('/api/exams', require('./routes/exams'));
+  app.use('/api/admin', require('./routes/admin'));
+  app.use('/api/results', require('./routes/results'));
+  app.use('/api/student-exams', require('./routes/student-exams'));
+  app.use('/api/exam-attempts', require('./routes/exam-attempts'));
+  app.use('/api/admin-results', require('./routes/admin-results'));
+  
+  console.log('All routes loaded successfully');
+} catch (error) {
+  console.error('Error loading routes:', error.message);
+}
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found', path: req.path });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Start server
+const server = app.listen(PORT, () => {
+  console.log('========================================');
+  console.log('✅ Vijeta API Started Successfully');
+  console.log('✅ Running on port:', PORT);
+  console.log('✅ Base URL: http://localhost:' + PORT);
+  console.log('========================================');
+});
+
+server.on('error', (err) => {
+  console.error('Server error:', err);
 });
