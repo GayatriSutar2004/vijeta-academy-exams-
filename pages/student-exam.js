@@ -174,18 +174,41 @@ const getFullscreenElement = () =>
         }
     }, []);
 
-    const checkExamAccess = async (examId, studentId) => {
+const checkExamAccess = async (examId, studentId) => {
         try {
             const response = await fetch(`https://vijeta-api.onrender.com/api/student-exams/${examId}/check-access/${studentId}`);
             const data = await response.json();
-
+            
             if (response.status === 403 || response.status === 404) {
                 setError(data.error);
                 setLoading(false);
                 return;
             }
-
+            
             if (data.access_status === 'ELIGIBLE') {
+                // Check for existing latest attempt
+                const latestResponse = await fetch('https://vijeta-api.onrender.com/api/latest-attempt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id, exam_id: examId })
+                });
+                const latestData = await latestResponse.json();
+                
+                if (latestData && latestData.attempt_id) {
+                    // Check if result is published
+                    const examResponse = await fetch(`https://vijeta-api.onrender.com/api/exams/${examId}`);
+                    const examData = await examResponse.json();
+                    
+                    if (examData.result_published) {
+                        router.push(`/exam-result?attemptId=${latestData.attempt_id}`);
+                        return;
+                    } else {
+                        setError('Results not yet published by admin.');
+                        setLoading(false);
+                        return;
+                    }
+                }
+                
                 loadExamQuestions(examId, studentId);
             } else {
                 setError('You are not eligible for this exam. This exam has not been assigned to your account.');
@@ -494,6 +517,156 @@ const getFullscreenElement = () =>
             )}
 
             <div className={styles.examContainer}>
+                {/* Left Panel - Question Menu */}
+                <div className={styles.leftPanel}>
+                    <div className={styles.panelHeader}>
+                        <h3>Questions</h3>
+                        <div className={styles.questionStats}>
+                            <span>Answered: {answeredCount}/{allQuestionsList.length}</span>
+                        </div>
+                    </div>
+                    <div className={styles.sectionList}>
+                        {sections.map((sectionName, sectionIdx) => (
+                            <div key={sectionName} className={styles.sectionGroup}>
+                                <div 
+                                    className={styles.sectionHeader}
+                                    onClick={() => setCurrentSection(sectionIdx)}
+                                >
+                                    {sectionName} ({getSectionAnsweredCount(sectionName, answers)}/{getSectionQuestionCount(sectionName, questionsBySection)})
+                                </div>
+                                <div className={styles.questionGrid}>
+                                    {(questionsBySection[sectionName] || []).map((q, qIdx) => {
+                                        const isAnswered = isQuestionAnswered(q.question_id, answers);
+                                        const isCurrent = currentSection === sectionIdx && currentQuestion === qIdx;
+                                        return (
+                                            <div
+                                                key={q.question_id}
+                                                className={`${styles.questionBox} ${isAnswered ? styles.answered : ''} ${isCurrent ? styles.current : ''}`}
+                                                onClick={() => {
+                                                    setCurrentSection(sectionIdx);
+                                                    setTimeout(() => {
+                                                        const el = document.getElementById(`question-${q.question_id}`);
+                                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                    }, 100);
+                                                }}
+                                            >
+                                                {qIdx + 1}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Main Content - Questions */}
+                <div className={styles.mainContent}>
+                    <div className={styles.examHeader}>
+                        <div className={styles.timer}>
+                            <div className={styles.timeDisplay} style={{ color: timeRemaining < 300 ? '#e74c3c' : '#2c3e50' }}>
+                                {formatTime(timeRemaining)}
+                            </div>
+                            <div className={styles.timerLabel}>Time Remaining</div>
+                        </div>
+                        <div className={styles.examInfo}>
+                            <h3>{examData?.exam?.exam_name}</h3>
+                            <p>Question {currentQ + 1} of {allQuestionsList.length}</p>
+                        </div>
+                    </div>
+
+                    <div className={styles.questionsContainer}>
+                        {sections.map((sectionName, sectionIdx) => (
+                            <div key={sectionName}>
+                                <h3 className={styles.sectionTitle}>{sectionName}</h3>
+                                {(questionsBySection[sectionName] || []).map((question, qIdx) => {
+                                    const questionId = question.question_id;
+                                    const isCurrent = currentSection === sectionIdx && currentQuestion === qIdx;
+                                    const isAnswered = isQuestionAnswered(questionId, answers);
+                                    
+                                    if (!isCurrent && currentSection !== sectionIdx) return null;
+                                    if (!isCurrent) return null;
+                                    
+                                    return (
+                                        <div 
+                                            key={questionId}
+                                            id={`question-${questionId}`}
+                                            className={styles.questionCard}
+                                        >
+                                            <div className={styles.questionHeader}>
+                                                <span className={styles.questionNumber}>
+                                                    Q{currentQ + 1}
+                                                </span>
+                                                <span className={`${styles.answerStatus} ${isAnswered ? styles.answered : styles.notAnswered}`}>
+                                                    {isAnswered ? '✓ Answered' : 'Not Answered'}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className={styles.questionText}>
+                                                {question.question_text}
+                                            </div>
+                                            
+                                            {question.image_path && (
+                                                <div style={{ marginTop: "15px", textAlign: "center" }}>
+                                                    <img 
+                                                        src={question.image_path} 
+                                                        alt="Question illustration" 
+                                                        style={{ 
+                                                            maxWidth: "100%", 
+                                                            maxHeight: "400px",
+                                                            borderRadius: "8px",
+                                                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+                                                        }} 
+                                                    />
+                                                </div>
+                                            )}
+                                            
+                                            <div className={styles.optionsContainer}>
+                                                {question.options.map((option, optionIndex) => {
+                                                    const parsedOption = parseOption(option);
+                                                    const isSelected = answers[questionId] === parsedOption.label;
+                                                    
+                                                    return (
+                                                        <label
+                                                            key={`${questionId}-${parsedOption.label}-${optionIndex}`}
+                                                            className={`${styles.optionLabel} ${isSelected ? styles.selectedOption : ''}`}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                name={`question-${questionId}`}
+                                                                value={parsedOption.label}
+                                                                checked={isSelected}
+                                                                onChange={() => handleAnswer(questionId, parsedOption.label)}
+                                                                style={{ marginRight: "10px" }}
+                                                            />
+                                                            <span className={styles.optionLabel_text}>
+                                                                <strong>{parsedOption.label})</strong> {parsedOption.text}
+                                                            </span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className={styles.submitContainer}>
+                        <button 
+                            className={styles.button}
+                            onClick={submitExam}
+                            disabled={submitting}
+                            style={{ 
+                                opacity: submitting ? 0.6 : 1,
+                                cursor: submitting ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {submitting ? 'Submitting...' : 'Submit Exam'}
+                        </button>
+                    </div>
+                </div>
                 <div className={styles.examHeader}>
                     <div className={styles.examInfo}>
                         <h2>{examData.exam.exam_name}</h2>

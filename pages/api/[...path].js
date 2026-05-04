@@ -62,18 +62,39 @@ export default async function handler(req, res) {
         return res.status(200).json(results);
       }
       
-      // Admin Results - exam attempts with student and exam info
-      if (path === 'admin-results') {
-        const results = await database.collection('exam_attempts').aggregate([
-          { $lookup: { from: 'students', localField: 'student_id', foreignField: '_id', as: 'student' } },
-          { $lookup: { from: 'exams', localField: 'exam_id', foreignField: '_id', as: 'exam' } },
-          { $unwind: '$student' },
-          { $unwind: '$exam' },
-          { $addFields: { student_name: '$student.student_name', roll_no: '$student.roll_no', exam_name: '$exam.exam_name' } },
-          { $sort: { submitted_at: -1 } }
-        ]).toArray();
-        return res.status(200).json(results);
-      }
+// Admin Results - exam attempts with student and exam info (only latest)
+       if (path === 'admin-results') {
+         const results = await database.collection('exam_attempts').aggregate([
+           { $match: { is_latest: true } },
+           { $lookup: { from: 'students', localField: 'student_id', foreignField: '_id', as: 'student' } },
+           { $lookup: { from: 'exams', localField: 'exam_id', foreignField: '_id', as: 'exam' } },
+           { $unwind: '$student' },
+           { $unwind: '$exam' },
+           { $addFields: { student_name: '$student.student_name', roll_no: '$student.roll_no', exam_name: '$exam.exam_name', result_published: '$exam.result_published' } },
+           { $sort: { submitted_at: -1 } }
+         ]).toArray();
+         return res.status(200).json(results);
+       }
+       
+       // Toggle result published
+       if (path.startsWith('exams/') && path.endsWith('/publish-result')) {
+         const id = path.split('/')[1];
+         const { publish } = req.body;
+         await database.collection('exams').updateOne(
+           { _id: new ObjectId(id) },
+           { $set: { result_published: publish } }
+         );
+         return res.status(200).json({ success: true, result_published: publish });
+       }
+       
+       // Get latest attempt for student+exam
+       if (path === 'latest-attempt') {
+         const { student_id, exam_id } = req.body;
+         const attempt = await database.collection('exam_attempts').findOne(
+           { student_id: new ObjectId(student_id), exam_id: new ObjectId(exam_id), is_latest: true }
+         );
+         return res.status(200).json(attempt || { error: 'No attempt found' });
+       }
       
       // Get student by ID
       if (path.startsWith('students/')) {
@@ -134,53 +155,61 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Student added', student_id: result.insertedId });
       }
       
-      // Add exam
-      if (path === 'exams/add') {
-        const newExam = {
-          exam_name: body.exam_name,
-          duration_minutes: parseInt(body.duration_minutes),
-          total_questions: parseInt(body.total_questions),
-          exam_type: body.exam_type,
-          exam_date: body.exam_date,
-          exam_time: body.exam_time,
-          created_by: body.created_by,
-          created_at: new Date()
-        };
-        const result = await database.collection('exams').insertOne(newExam);
-        return res.status(200).json({ message: 'Exam created', exam_id: result.insertedId });
-      }
+// Add exam
+       if (path === 'exams/add') {
+         const newExam = {
+           exam_name: body.exam_name,
+           duration_minutes: parseInt(body.duration_minutes),
+           total_questions: parseInt(body.total_questions),
+           exam_type: body.exam_type,
+           exam_date: body.exam_date,
+           exam_time: body.exam_time,
+           created_by: body.created_by,
+           result_published: false,
+           created_at: new Date()
+         };
+         const result = await database.collection('exams').insertOne(newExam);
+         return res.status(200).json({ message: 'Exam created', exam_id: result.insertedId });
+       }
       
-      // Submit exam attempt
-      if (path === 'exam-attempts') {
-        const { student_id, exam_id, answers } = body;
-        
-        const attempt = {
-          exam_id: new ObjectId(exam_id),
-          student_id: new ObjectId(student_id),
-          start_time: new Date(),
-          end_time: new Date(),
-          submitted_at: new Date(),
-          attempt_status: 'Submitted'
-        };
-        
-        const result = await database.collection('exam_attempts').insertOne(attempt);
-        const attemptId = result.insertedId;
-        
-        // Insert all answers
-        if (answers) {
-          const responses = [];
-          for (const [questionId, selectedAnswer] of Object.entries(answers)) {
-            responses.push({
-              attempt_id: attemptId,
-              question_id: new ObjectId(questionId),
-              selected_answer: selectedAnswer
-            });
-          }
-          await database.collection('student_responses').insertMany(responses);
-        }
-        
-        return res.status(200).json({ success: true, attempt_id: attemptId });
-      }
+// Submit exam attempt (allow multiple, latest = final)
+       if (path === 'exam-attempts') {
+         const { student_id, exam_id, answers } = body;
+         
+         // Mark all previous attempts as not latest
+         await database.collection('exam_attempts').updateMany(
+           { exam_id: new ObjectId(exam_id), student_id: new ObjectId(student_id) },
+           { $set: { is_latest: false } }
+         );
+         
+         const attempt = {
+           exam_id: new ObjectId(exam_id),
+           student_id: new ObjectId(student_id),
+           start_time: new Date(),
+           end_time: new Date(),
+           submitted_at: new Date(),
+           attempt_status: 'Submitted',
+           is_latest: true
+         };
+         
+         const result = await database.collection('exam_attempts').insertOne(attempt);
+         const attemptId = result.insertedId;
+         
+         // Insert all answers
+         if (answers) {
+           const responses = [];
+           for (const [questionId, selectedAnswer] of Object.entries(answers)) {
+             responses.push({
+               attempt_id: attemptId,
+               question_id: new ObjectId(questionId),
+               selected_answer: selectedAnswer
+             });
+           }
+           await database.collection('student_responses').insertMany(responses);
+         }
+         
+         return res.status(200).json({ success: true, attempt_id: attemptId });
+       }
       
       return res.status(404).json({ error: 'Endpoint not found' });
     }
@@ -224,6 +253,17 @@ export default async function handler(req, res) {
         const id = path.split('/')[1];
         await database.collection('exams').deleteOne({ _id: new ObjectId(id) });
         return res.status(200).json({ message: 'Exam deleted' });
+      }
+      
+      // Toggle result published
+      if (path.startsWith('exams/') && path.endsWith('/publish-result')) {
+        const id = path.split('/')[1];
+        const { publish } = req.body;
+        await database.collection('exams').updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { result_published: publish } }
+        );
+        return res.status(200).json({ success: true, result_published: publish });
       }
       
       return res.status(404).json({ error: 'Endpoint not found' });
