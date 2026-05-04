@@ -1,4 +1,8 @@
 import { MongoClient, ObjectId } from 'mongodb';
+import mammoth from 'mammoth';
+import AdmZip from 'adm-zip';
+import fs from 'fs';
+import path from 'path';
 
 export const config = {
   api: {
@@ -20,6 +24,105 @@ const getDb = async () => {
   await client.connect();
   db = client.db(process.env.MONGODB_DB || 'vijeta_db');
   return db;
+};
+
+// Word file parser with image extraction
+const parseWordDocument = async (filePath) => {
+  const result = { questions: [], sections: [], images: [] };
+  
+  try {
+    // Extract text
+    const { value: text } = await mammoth.extractRawText({ path: filePath });
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    // Extract images from docx (zip format)
+    try {
+      const zip = new AdmZip(filePath);
+      const zipEntries = zip.getEntries();
+      let imageIndex = 0;
+      
+      for (const entry of zipEntries) {
+        if (entry.entryName.startsWith('word/media/')) {
+          const imageData = entry.getData();
+          const imageName = `image_${Date.now()}_${imageIndex}.png`;
+          const imagePath = path.join(process.cwd(), 'public', 'question-images', imageName);
+          
+          // Ensure directory exists
+          const dir = path.dirname(imagePath);
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+          }
+          
+          fs.writeFileSync(imagePath, imageData);
+          result.images.push({ name: imageName, path: `/question-images/${imageName}` });
+          imageIndex++;
+        }
+      }
+    } catch (e) {
+      console.log('No images found in docx');
+    }
+    
+    // Parse questions (simplified - adjust regex as needed)
+    let currentQuestion = null;
+    let imageIdx = 0;
+    
+    for (const line of lines) {
+      // Question start (Q1, 1., Question 1, etc.)
+      if (/^Q\.?\s*\d+/i.test(line) || /^\d+[\.\)]/.test(line)) {
+        if (currentQuestion) {
+          result.questions.push(currentQuestion);
+        }
+        
+        currentQuestion = {
+          question_text: line,
+          options: [],
+          correct_answer: null,
+          section: result.sections[result.sections.length - 1] || 'General'
+        };
+        
+        // Link image if available
+        if (imageIdx < result.images.length) {
+          currentQuestion.image_path = result.images[imageIdx].path;
+          imageIdx++;
+        }
+      }
+      // Option (A), B), etc.)
+      else if (/^[A-D]\)/.test(line)) {
+        if (currentQuestion) {
+          currentQuestion.options.push(line);
+        }
+      }
+      // Answer
+      else if (/^Answer\s*:/.test(line)) {
+        if (currentQuestion) {
+          const match = line.match(/Answer\s*:\s*([A-D])/i);
+          if (match) {
+            currentQuestion.correct_answer = match[1].toUpperCase();
+          }
+        }
+      }
+      // Section header
+      else if (/^\[.*\]/.test(line)) {
+        const sectionName = line.replace(/[\[\]]/g, '');
+        if (!result.sections.includes(sectionName)) {
+          result.sections.push(sectionName);
+        }
+      }
+      // Question text continuation
+      else if (currentQuestion && !currentQuestion.question_text.includes(line)) {
+        currentQuestion.question_text += ' ' + line;
+      }
+    }
+    
+    if (currentQuestion) {
+      result.questions.push(currentQuestion);
+    }
+    
+  } catch (error) {
+    console.error('Error parsing Word document:', error);
+  }
+  
+  return result;
 };
 
 export default async function handler(req, res) {
@@ -156,21 +259,60 @@ export default async function handler(req, res) {
       }
       
 // Add exam
-       if (path === 'exams/add') {
-         const newExam = {
-           exam_name: body.exam_name,
-           duration_minutes: parseInt(body.duration_minutes),
-           total_questions: parseInt(body.total_questions),
-           exam_type: body.exam_type,
-           exam_date: body.exam_date,
-           exam_time: body.exam_time,
-           created_by: body.created_by,
-           result_published: false,
-           created_at: new Date()
-         };
-         const result = await database.collection('exams').insertOne(newExam);
-         return res.status(200).json({ message: 'Exam created', exam_id: result.insertedId });
-       }
+        if (path === 'exams/add') {
+          const newExam = {
+            exam_name: body.exam_name,
+            duration_minutes: parseInt(body.duration_minutes),
+            total_questions: parseInt(body.total_questions),
+            exam_type: body.exam_type,
+            exam_date: body.exam_date,
+            exam_time: body.exam_time,
+            created_by: body.created_by,
+            result_published: false,
+            created_at: new Date()
+          };
+          const result = await database.collection('exams').insertOne(newExam);
+          return res.status(200).json({ message: 'Exam created', exam_id: result.insertedId });
+        }
+        
+        // Upload and parse Word file
+        if (path === 'upload-exam') {
+          const { exam_id, file_path } = body;
+          
+          if (!file_path || !exam_id) {
+            return res.status(400).json({ error: 'exam_id and file_path required' });
+          }
+          
+          const parseResult = await parseWordDocument(file_path);
+          
+          // Insert questions
+          if (parseResult.questions && parseResult.questions.length > 0) {
+            const questionsToInsert = parseResult.questions.map((q, idx) => ({
+              exam_id: new ObjectId(exam_id),
+              question_text: q.question_text,
+              options: q.options || [],
+              correct_answer: q.correct_answer || '',
+              section: q.section || 'General',
+              question_number: idx + 1,
+              marks: 1,
+              created_at: new Date()
+            }));
+            
+            await database.collection('questions').insertMany(questionsToInsert);
+            
+            // Update exam with total questions
+            await database.collection('exams').updateOne(
+              { _id: new ObjectId(exam_id) },
+              { $set: { total_questions: parseResult.questions.length } }
+            );
+          }
+          
+          return res.status(200).json({
+            success: true,
+            questions_parsed: parseResult.questions?.length || 0,
+            images_extracted: parseResult.images?.length || 0
+          });
+        }
       
 // Submit exam attempt (allow multiple, latest = final)
        if (path === 'exam-attempts') {
