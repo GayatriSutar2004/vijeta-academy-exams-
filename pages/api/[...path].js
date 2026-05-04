@@ -3,6 +3,7 @@ import mammoth from 'mammoth';
 import AdmZip from 'adm-zip';
 import fs from 'fs';
 import path from 'path';
+import sharp from 'sharp';
 
 export const config = {
   api: {
@@ -44,16 +45,33 @@ const parseWordDocument = async (filePath) => {
       for (const entry of zipEntries) {
         if (entry.entryName.startsWith('word/media/')) {
           const imageData = entry.getData();
-          const imageName = `image_${Date.now()}_${imageIndex}.png`;
-          const imagePath = path.join(process.cwd(), 'public', 'question-images', imageName);
+          const ext = entry.entryName.endsWith('.png') ? 'png' : 'jpg';
+          const imageName = `image_${Date.now()}_${imageIndex}.${ext}`;
+          const tempPath = path.join(process.cwd(), 'public', 'question-images', `temp_${imageName}`);
+          const finalPath = path.join(process.cwd(), 'public', 'question-images', imageName);
           
           // Ensure directory exists
-          const dir = path.dirname(imagePath);
+          const dir = path.dirname(tempPath);
           if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
           }
           
-          fs.writeFileSync(imagePath, imageData);
+          // Save temporarily
+          fs.writeFileSync(tempPath, imageData);
+          
+          try {
+            // Compress image (resize to max 800px width)
+            await sharp(tempPath)
+              .resize(800, null, { fit: 'inside' })
+              .toFile(finalPath);
+            fs.unlinkSync(tempPath); // Remove temp file
+            console.log(`✓ Compressed: ${imageName}`);
+          } catch (compressErr) {
+            // If compression fails, use original
+            fs.renameSync(tempPath, finalPath);
+            console.log(`✓ Saved (no compression): ${imageName}`);
+          }
+          
           result.images.push({ name: imageName, path: `/question-images/${imageName}` });
           imageIndex++;
         }
@@ -190,14 +208,73 @@ export default async function handler(req, res) {
          return res.status(200).json({ success: true, result_published: publish });
        }
        
-       // Get latest attempt for student+exam
-       if (path === 'latest-attempt') {
-         const { student_id, exam_id } = req.body;
-         const attempt = await database.collection('exam_attempts').findOne(
-           { student_id: new ObjectId(student_id), exam_id: new ObjectId(exam_id), is_latest: true }
-         );
-         return res.status(200).json(attempt || { error: 'No attempt found' });
-       }
+// Get latest attempt for student+exam
+        if (path === 'latest-attempt') {
+          const { student_id, exam_id } = req.body;
+          const attempt = await database.collection('exam_attempts').findOne(
+            { student_id: new ObjectId(student_id), exam_id: new ObjectId(exam_id), is_latest: true }
+          );
+          return res.status(200).json(attempt || { error: 'No attempt found' });
+        }
+        
+        // Download result as PDF
+        if (path === 'download-result') {
+          const { attempt_id } = req.body;
+          
+          if (!attempt_id) {
+            return res.status(400).json({ error: 'attempt_id required' });
+          }
+          
+          const attempt = await database.collection('exam_attempts').findOne({ _id: new ObjectId(attempt_id) });
+          if (!attempt) {
+            return res.status(404).json({ error: 'Attempt not found' });
+          }
+          
+          const student = await database.collection('students').findOne({ _id: attempt.student_id });
+          const exam = await database.collection('exams').findOne({ _id: attempt.exam_id });
+          const responses = await database.collection('student_responses').find({ attempt_id: new ObjectId(attempt_id) }).toArray();
+          
+          // Create simple HTML for PDF
+          let html = `
+            <!DOCTYPE html>
+            <html>
+            <head><style>
+              body { font-family: Arial; margin: 40px; }
+              h1 { color: #1e5bbf; text-align: center; }
+              .info { margin: 20px 0; padding: 10px; background: #f8f9fa; }
+              .question { margin: 15px 0; padding: 10px; border-left: 3px solid #1e5bbf; }
+              .correct { color: #28a745; font-weight: bold; }
+              .wrong { color: #dc3545; font-weight: bold; }
+            </style></head>
+            <body>
+              <h1>Exam Result</h1>
+              <div class="info">
+                <p><strong>Student:</strong> ${student?.student_name || 'N/A'}</p>
+                <p><strong>Roll No:</strong> ${student?.roll_no || 'N/A'}</p>
+                <p><strong>Exam:</strong> ${exam?.exam_name || 'N/A'}</p>
+                <p><strong>Date:</strong> ${new Date(attempt.submitted_at).toLocaleDateString()}</p>
+              </div>
+              <h2>Question-wise Results:</h2>
+          `;
+          
+          for (let i = 0; i < responses.length; i++) {
+            const r = responses[i];
+            const status = r.is_correct ? 'correct' : 'wrong';
+            const statusText = r.is_correct ? '✓ Correct' : '✗ Wrong';
+            html += `
+              <div class="question">
+                <p><strong>Q${i+1}:</strong> ${r.selected_answer || 'Not attempted'}</p>
+                <p class="${status}">${statusText}</p>
+              </div>
+            `;
+          }
+          
+          html += `</body></html>`;
+          
+          // For now, return HTML (can be converted to PDF with Puppeteer)
+          res.setHeader('Content-Type', 'text/html');
+          return res.status(200).send(html);
+        }
       
       // Get student by ID
       if (path.startsWith('students/')) {
