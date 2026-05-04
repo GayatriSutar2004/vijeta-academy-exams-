@@ -26,6 +26,22 @@ export default async function handler(req, res) {
   const path = req.url?.replace('/api/', '').replace(/\?.*/, '') || '';
   const database = await getDb();
   
+  // Root route fix
+  if (path === '' || path === '/') {
+    return res.status(200).json({
+      status: 'ok',
+      message: 'Vijeta API is running',
+      version: '1.0.0',
+      endpoints: {
+        admin: '/api/admin',
+        students: '/api/students',
+        exams: '/api/exams',
+        examAttempts: '/api/exam-attempts',
+        adminResults: '/api/admin-results'
+      }
+    });
+  }
+  
   try {
     if (req.method === 'GET') {
       // Admin collection
