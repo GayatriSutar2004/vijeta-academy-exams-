@@ -474,6 +474,61 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Exam deleted' });
       }
       
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
+    
+    // Convert Word document to exam format
+    if (path === 'convert-to-exam' && req.method === 'POST') {
+      const formData = await req.formData();
+      const file = formData.get('file');
+      
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      const tempPath = path.join(process.cwd(), 'temp', file.name);
+      if (!fs.existsSync(path.dirname(tempPath))) {
+        fs.mkdirSync(path.dirname(tempPath), { recursive: true });
+      }
+      
+      const buffer = await file.arrayBuffer();
+      fs.writeFileSync(tempPath, Buffer.from(buffer));
+      
+      try {
+        const result = await parseWordDocument(tempPath);
+        
+        // Clean up temp file
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+        
+        return res.status(200).json({
+          success: true,
+          exam_name: path.basename(file.name, path.extname(file.name)),
+          questions: result.questions,
+          sections: result.sections,
+          images: result.images,
+          total_questions: result.questions.length
+        });
+      } catch (err) {
+        return res.status(500).json({ error: 'Conversion failed: ' + err.message });
+      }
+    }
+    
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (error) {
+    console.error('API Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+}
+      
+      // Delete exam
+      if (path.startsWith('exams/')) {
+        const id = path.split('/')[1];
+        await database.collection('exams').deleteOne({ _id: new ObjectId(id) });
+        return res.status(200).json({ message: 'Exam deleted' });
+      }
+      
       // Toggle result published
       if (path.startsWith('exams/') && path.endsWith('/publish-result')) {
         const id = path.split('/')[1];

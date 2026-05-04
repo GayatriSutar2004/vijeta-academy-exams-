@@ -1,0 +1,376 @@
+{
+  "exam_name": "file2",
+  "questions": [
+    {
+      "question_number": 1,
+      "question_text": "Q1. भारत का राष्ट्रीय पशु कौन सा है?",
+      "options": [
+        "A) शेरB) बाघC) हाथीD) घोड़ा"
+      ],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": "/question-images/q_image_0.png"
+    },
+    {
+      "question_number": 2,
+      "question_text": "Q2. भारतीय संविधान कब लागू हुआ?",
+      "options": [
+        "A) 26 जनवरी 1947B) 15 अगस्त 1947C) 26 जनवरी 1950D) 2 अक्टूबर 1950"
+      ],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": "/question-images/q_image_1.png"
+    },
+    {
+      "question_number": 3,
+      "question_text": "Q3. भारत की राजधानी क्या है?",
+      "options": [
+        "A) मुंबईB) कोलकाताC) नई दिल्लीD) चेन्नई"
+      ],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 4,
+      "question_text": "Q4. भारतीय ध्वज में कितने रंग होते हैं?",
+      "options": [
+        "A) 2B) 3C) 4D) 5"
+      ],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 5,
+      "question_text": "Q5. भारत का सबसे बड़ा राज्य क्षेत्रफल के अनुसार कौन सा है?A) महाराष्ट्रB) राजस्थानC) उत्तर प्रदेशD) मध्य प्रदेश",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 6,
+      "question_text": "Q6. भारतीय सेना दिवस कब मनाया जाता है?A) 15 जनवरीB) 26 जनवरीC) 15 अगस्तD) 2 अक्टूबर",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 7,
+      "question_text": "Q7. भारतीय वायु सेना का मुख्यालय कहाँ है?A) मुंबईB) नई दिल्लीC) पुणेD) बेंगलुरु",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 8,
+      "question_text": "Q8. भारत का राष्ट्रीय पक्षी कौन सा है?A) तोताB) कबूतरC) मोरD) हंस",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 9,
+      "question_text": "Q9. भारत का सबसे लंबा नदी कौन सी है?A) यमुनाB) गंगाC) गोदावरीD) नर्मदा",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 10,
+      "question_text": "Q10. भारत का राष्ट्रीय गीत कौन सा है?A) जन गण मनB) वंदे मातरम्C) सारे जहाँ से अच्छाD) जय हिंद Section 2:- सामान्य विज्ञान",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 11,
+      "question_text": "Q11. मानव शरीर का सबसे बड़ा अंग कौन सा है?A) हृदयB) फेफड़ेC) त्वचाD) मस्तिष्क",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 12,
+      "question_text": "Q12. पानी का रासायनिक सूत्र क्या है?A) CO₂B) H₂OC) O₂D) NaCl",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 13,
+      "question_text": "Q13. प्रकाश की गति कितनी होती है?A) 3 × 10⁸ m/sB) 3 × 10⁶ m/sC) 3 × 10⁷ m/sD) 3 × 10⁹ m/s",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 14,
+      "question_text": "Q14. मनुष्य के शरीर में कितनी हड्डियाँ होती हैं?A) 200B) 206C) 210D) 212",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 15,
+      "question_text": "Q15. सूर्य किस प्रकार का तारा है?A) लालB) पीलाC) नीलाD) सफेद",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 16,
+      "question_text": "Q16. रक्त का लाल रंग किसके कारण होता है?A) प्लेटलेट्सB) हीमोग्लोबिनC) प्लाज्माD) कोशिका",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 17,
+      "question_text": "Q17. सबसे कठोर पदार्थ कौन सा है?A) सोनाB) चांदीC) हीराD) लोहा",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 18,
+      "question_text": "Q18. पौधे भोजन किस प्रक्रिया से बनाते हैं?A) वाष्पीकरणB) श्वसनC) प्रकाश संश्लेषणD) पाचन",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 19,
+      "question_text": "Q19. पृथ्वी का उपग्रह कौन सा है?A) सूर्यB) मंगलC) चंद्रमाD) शुक्र",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 20,
+      "question_text": "Q20. ध्वनि किस माध्यम में नहीं चल सकती?A) ठोसB) द्रवC) गैसD) निर्वात Section 3:- गणित",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 21,
+      "question_text": "Q21. 144 का वर्गमूल क्या है?A) 10B) 11C) 12D) 14",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 22,
+      "question_text": "Q22. 20% of 500 कितना होगा?A) 80B) 90C) 100D) 120",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 23,
+      "question_text": "Q23. 15 × 8 कितना होगा?A) 100B) 110C) 120D) 130",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 24,
+      "question_text": "Q24. एक त्रिभुज का क्षेत्रफल (base=10, height=5) कितना होगा?",
+      "options": [
+        "A) 20B) 25C) 30D) 35"
+      ],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 25,
+      "question_text": "Q25. 1000 का 10% कितना होगा?A) 50B) 100C) 150D) 200",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 26,
+      "question_text": "Q26. यदि एक वस्तु 60 km/h की गति से 2 घंटे चले, तो दूरी कितनी होगी?",
+      "options": [
+        "A) 100 kmB) 110 kmC) 120 kmD) 130 km"
+      ],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 27,
+      "question_text": "Q27. 25 का वर्ग क्या है?A) 625B) 525C) 725D) 425",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 28,
+      "question_text": "Q28. 9 × 9 कितना होगा?A) 72B) 81C) 91D) 99",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 29,
+      "question_text": "Q29. 1 से 10 तक संख्याओं का औसत कितना है?A) 4B) 5C) 5.5D) 6",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 30,
+      "question_text": "Q30. 50 + 25 ÷ 5 कितना होगा?A) 55B) 60C) 65D) 70 Section 4:- बुद्धिमत्ता",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 31,
+      "question_text": "Q31. पिता : पुत्र :: माता : ?A) भाईB) बहनC) पुत्रीD) चाचा",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 32,
+      "question_text": "Q32. 2, 4, 6, 8, ?A) 9B) 10C) 11D) 12",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 33,
+      "question_text": "Q33. यदि CAT = DBU, तो DOG = ?A) EPHB) EOGC) FPHD) FQI",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 34,
+      "question_text": "Q34. 5m east, 12m north — दूरी कितनी होगी?",
+      "options": [
+        "A) 10B) 11C) 12D) 13"
+      ],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 35,
+      "question_text": "Q35. A, C, E, G, ?A) HB) IC) JD) K",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 36,
+      "question_text": "Q36. Monday के बाद कौन सा दिन आता है?A) SundayB) TuesdayC) WednesdayD) Thursday",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 37,
+      "question_text": "Q37. यदि सभी बिल्लियाँ जानवर हैं, और कुछ जानवर काले हैं, तो —A) सभी बिल्लियाँ काली हैंB) कुछ बिल्लियाँ काली हो सकती हैंC) कोई बिल्ली काली नहींD) सभी जानवर बिल्लियाँ हैं",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 38,
+      "question_text": "Q38. 7, 14, 21, 28, ?A) 32B) 35C) 36D) 38",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 39,
+      "question_text": "Q39. South के विपरीत दिशा कौन सी है?A) EastB) WestC) NorthD) South AnserKey:- Section 1 – सामान्य ज्ञान",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 40,
+      "question_text": "Q1. BQ2. CQ3. CQ4. BQ5. BQ6. AQ7. BQ8. CQ9. BQ10. B Section 2 – सामान्य विज्ञान",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 41,
+      "question_text": "Q11. CQ12. BQ13. AQ14. BQ15. BQ16. BQ17. CQ18. CQ19. CQ20. D Section 3 – गणित",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 42,
+      "question_text": "Q21. CQ22. CQ23. CQ24. BQ25. BQ26. CQ27. AQ28. BQ29. CQ30. A Section 4 – बुद्धिमत्ता",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    },
+    {
+      "question_number": 43,
+      "question_text": "Q31. CQ32. BQ33. AQ34. DQ35. BQ36. BQ37. BQ38. BQ39. C",
+      "options": [],
+      "correct_answer": null,
+      "section": "General",
+      "image_path": null
+    }
+  ],
+  "sections": [],
+  "images": [
+    {
+      "name": "q_image_0.png",
+      "path": "/question-images/q_image_0.png",
+      "index": 0
+    },
+    {
+      "name": "q_image_1.png",
+      "path": "/question-images/q_image_1.png",
+      "index": 1
+    }
+  ]
+}
