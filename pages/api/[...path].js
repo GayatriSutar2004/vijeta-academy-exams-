@@ -308,48 +308,64 @@ export default async function handler(req, res) {
          return res.status(200).json(attempts);
        }
        
-       // Get single exam attempt details
-       if (path.startsWith('exam-attempts/')) {
-         const attemptId = path.split('/')[1];
-         const attempt = await database.collection('exam_attempts').findOne({ _id: new ObjectId(attemptId) });
-         if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
-         
-         const responses = await database.collection('student_responses').aggregate([
-           { $match: { attempt_id: new ObjectId(attemptId) } },
-           { $lookup: { from: 'questions', localField: 'question_id', foreignField: '_id', as: 'question' } },
-           { $unwind: { path: '$question', preserveNullAndEmptyArrays: true } },
-           { $project: {
-             question_id: '$question._id',
-             question_text: '$question.question_text',
-             image_path: '$question.image_path',
-             options: '$question.options',
-             correct_option_label: '$question.correct_answer',
-             correct_option_text: '$question.correct_answer',
-             explanation_text: '$question.explanation',
-             selected_answer: '$selected_answer',
-             is_correct: { $eq: ['$selected_answer', '$question.correct_answer'] }
-           }}
-         ]).toArray();
-         
-         const total = responses.length;
-         const correct = responses.filter(r => r.is_correct).length;
-         const percentage = total > 0 ? (correct / total) * 100 : 0;
-         
-         return res.status(200).json({
-           attempt: {
-             ...attempt,
-             exam_name: attempt.exam_name || '',
-             student_name: attempt.student_name || '',
-             exam_type: attempt.exam_type || ''
-           },
-           responses,
-           performance: {
-             total_questions: total,
-             correct_answers: correct,
-             percentage
-           }
-         });
-       }
+        // Get single exam attempt details
+        if (path.startsWith('exam-attempts/')) {
+          const attemptId = path.split('/')[1];
+          
+          const responses = await database.collection('student_responses').aggregate([
+            { $match: { attempt_id: new ObjectId(attemptId) } },
+            { $lookup: { from: 'questions', localField: 'question_id', foreignField: '_id', as: 'question' } },
+            { $unwind: { path: '$question', preserveNullAndEmptyArrays: true } },
+            { $project: {
+              question_id: '$question._id',
+              question_text: '$question.question_text',
+              image_path: '$question.image_path',
+              options: '$question.options',
+              correct_option_label: '$question.correct_answer',
+              correct_option_text: '$question.correct_answer',
+              explanation_text: '$question.explanation',
+              selected_answer: '$selected_answer',
+              is_correct: { $eq: ['$selected_answer', '$question.correct_answer'] }
+            }}
+          ]).toArray();
+          
+          const attempt = await database.collection('exam_attempts').aggregate([
+            { $match: { _id: new ObjectId(attemptId) } },
+            { $lookup: { from: 'exams', localField: 'exam_id', foreignField: '_id', as: 'exam' } },
+            { $lookup: { from: 'students', localField: 'student_id', foreignField: '_id', as: 'student' } },
+            { $unwind: { path: '$exam', preserveNullAndEmptyArrays: true } },
+            { $unwind: { path: '$student', preserveNullAndEmptyArrays: true } },
+            { $project: {
+              exam_name: '$exam.exam_name',
+              exam_type: '$exam.exam_type',
+              student_name: '$student.student_name',
+              roll_no: '$student.roll_no',
+              submitted_at: 1,
+              attempt_status: 1,
+              percentage: 1,
+              result_status: 1,
+              correct_answers: 1,
+              total_questions: 1
+            }}
+          ]).toArray().then(r => r[0] || null);
+          
+          const total = responses.length;
+          const correct = responses.filter(r => r.is_correct).length;
+          const wrong = total - correct;
+          const percentage = total > 0 ? (correct / total) * 100 : 0;
+          
+          return res.status(200).json({
+            attempt: attempt || { exam_name: '', student_name: '', exam_type: '' },
+            responses,
+            performance: {
+              total_questions: total,
+              correct_answers: correct,
+              wrong_answers: wrong,
+              percentage,
+              result_status: percentage >= 40 ? 'Pass' : 'Fail'
+            }
+          });
+        }
        
        // Get available exams for student
        if (path.startsWith('student-exams/available/')) {
@@ -376,18 +392,34 @@ export default async function handler(req, res) {
          return res.status(200).json({ access_status: 'ELIGIBLE', exam });
        }
        
-       // Get exam questions for student
-       if (path.match(/^student-exams\/[^/]+\/questions\/[^/]+$/)) {
-         const parts = path.split('/');
-         const examId = parts[1];
-         const studentId = parts[3];
-         
-         const exam = await database.collection('exams').findOne({ _id: new ObjectId(examId) });
-         if (!exam) return res.status(404).json({ error: 'Exam not found' });
-         
-         const questions = await database.collection('questions').find({ exam_id: new ObjectId(examId) }).toArray();
-         return res.status(200).json({ exam, questions });
-       }
+        // Get exam questions for student
+        if (path.match(/^student-exams\/[^/]+\/questions\/[^/]+$/)) {
+          const parts = path.split('/');
+          const examId = parts[1];
+          const studentId = parts[3];
+          
+          const exam = await database.collection('exams').findOne({ _id: new ObjectId(examId) });
+          if (!exam) return res.status(404).json({ error: 'Exam not found' });
+          
+          const questions = await database.collection('questions').find({ exam_id: new ObjectId(examId) }).sort({ question_number: 1 }).toArray();
+          
+          // Group by section
+          const questionsBySection = {};
+          questions.forEach(q => {
+            const section = q.section || 'General';
+            if (!questionsBySection[section]) questionsBySection[section] = [];
+            questionsBySection[section].push(q);
+          });
+          
+          const sections = Object.keys(questionsBySection);
+          
+          return res.status(200).json({ 
+            exam, 
+            questions_by_section: questionsBySection,
+            sections,
+            total_questions: exam.total_questions || questions.length
+          });
+        }
        
        // Get next roll number
        if (path === 'students/next-roll-no') {
