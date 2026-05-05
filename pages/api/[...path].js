@@ -4,6 +4,7 @@ import AdmZip from 'adm-zip';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 export const config = {
   api: {
@@ -138,6 +139,133 @@ const parseWordDocument = async (filePath) => {
     
   } catch (error) {
     console.error('Error parsing Word document:', error);
+  }
+  
+  return result;
+};
+
+// Convert any Word document to template format
+const convertToTemplateFormat = async (filePath) => {
+  const result = { formatted_text: '', total_questions: 0, sections: [] };
+  
+  try {
+    // Extract text from Word document
+    const { value: text } = await mammoth.extractRawText({ path: filePath });
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    let currentSection = 'General';
+    let questions = [];
+    let currentQuestion = null;
+    let questionCounter = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Detect section headers like "Section A", "General Knowledge", etc.
+      if (/^\[.*\]$/.test(line)) {
+        currentSection = line.replace(/[\[\]]/g, '').trim();
+        if (!result.sections.includes(currentSection)) {
+          result.sections.push(currentSection);
+        }
+        continue;
+      }
+      
+      // Detect section headers without brackets
+      if (/^(section\s+\w+|general\s+knowledge|general\s+science|mathematics|english|physics|chemistry|biology)/i.test(line)) {
+        currentSection = line.trim();
+        if (!result.sections.includes(currentSection)) {
+          result.sections.push(currentSection);
+        }
+        continue;
+      }
+      
+      // Detect question start - various formats
+      const questionMatch = line.match(/^(?:Q\.?\s*(\d+)|(\d+)[\.\)]\s*|Question\s*(\d+)[\.\)]\s*)/i);
+      
+      if (questionMatch) {
+        // Save previous question
+        if (currentQuestion && currentQuestion.options.length === 4) {
+          questions.push(currentQuestion);
+        }
+        
+        // Get question number
+        const qNum = questionMatch[1] || questionMatch[2] || questionMatch[3] || (questionCounter + 1).toString();
+        questionCounter = parseInt(qNum) || questionCounter + 1;
+        
+        // Extract question text (remove the question number prefix)
+        let questionText = line.replace(/^(?:Q\.?\s*\d+|(\d+)[\.\)]\s*|Question\s*\d+[\.\)]\s*)/i, '').trim();
+        
+        currentQuestion = {
+          number: questionCounter,
+          text: questionText,
+          options: [],
+          answer: null,
+          section: currentSection
+        };
+        continue;
+      }
+      
+      // Detect options - various formats
+      const optionMatch = line.match(/^([A-D])[\.\)\s]\s*(.+)/i);
+      if (optionMatch && currentQuestion) {
+        const optionLetter = optionMatch[1].toUpperCase();
+        const optionText = optionMatch[2].trim();
+        
+        // Map to A, B, C, D
+        const optionIndex = optionLetter.charCodeAt(0) - 65;
+        if (optionIndex >= 0 && optionIndex < 4) {
+          currentQuestion.options[optionIndex] = optionText;
+        }
+        continue;
+      }
+      
+      // Detect answer line
+      const answerMatch = line.match(/^(?:Answer|Ans|Correct)[\s:]*([A-D])/i);
+      if (answerMatch && currentQuestion) {
+        currentQuestion.answer = answerMatch[1].toUpperCase();
+        continue;
+      }
+      
+      // If line looks like continuation of question text
+      if (currentQuestion && currentQuestion.options.length === 0 && !/^[A-D][\.\)\s]/.test(line)) {
+        currentQuestion.text += ' ' + line;
+        continue;
+      }
+    }
+    
+    // Don't forget the last question
+    if (currentQuestion && currentQuestion.options.length === 4) {
+      questions.push(currentQuestion);
+    }
+    
+    // Build formatted text
+    let formattedText = '';
+    let currentSectionName = '';
+    
+    for (const q of questions) {
+      if (q.section !== currentSectionName) {
+        currentSectionName = q.section;
+        formattedText += `\n[${currentSectionName}]\n\n`;
+      }
+      
+      formattedText += `Q${q.number}. ${q.text}\n`;
+      formattedText += `A) ${q.options[0] || ''}\n`;
+      formattedText += `B) ${q.options[1] || ''}\n`;
+      formattedText += `C) ${q.options[2] || ''}\n`;
+      formattedText += `D) ${q.options[3] || ''}\n`;
+      formattedText += `Answer: ${q.answer || 'B'}\n\n`;
+    }
+    
+    result.formatted_text = formattedText.trim();
+    result.total_questions = questions.length;
+    
+    if (result.sections.length === 0) {
+      result.sections.push('General');
+    }
+    
+  } catch (error) {
+    console.error('Error converting to template format:', error);
+    throw error;
   }
   
   return result;
@@ -477,6 +605,73 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Endpoint not found' });
     }
     
+    // Convert any Word document to template format
+    if (path === 'convert-to-template' && req.method === 'POST') {
+      const formData = await req.formData();
+      const file = formData.get('file');
+      
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      const tempPath = path.join(process.cwd(), 'temp', file.name);
+      if (!fs.existsSync(path.dirname(tempPath))) {
+        fs.mkdirSync(path.dirname(tempPath), { recursive: true });
+      }
+      
+      const buffer = await file.arrayBuffer();
+      fs.writeFileSync(tempPath, Buffer.from(buffer));
+      
+      try {
+        const result = await convertToTemplateFormat(tempPath);
+        
+        // Clean up temp file
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+        
+        return res.status(200).json({
+          success: true,
+          formatted_text: result.formatted_text,
+          total_questions: result.total_questions,
+          sections: result.sections
+        });
+      } catch (err) {
+        return res.status(500).json({ error: 'Conversion failed: ' + err.message });
+      }
+    }
+    
+    // Generate formatted Word document from text
+    if (path === 'generate-formatted-docx' && req.method === 'POST') {
+      const { text, filename } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: 'No text provided' });
+      }
+      
+      try {
+        const doc = new Document({
+          sections: [{
+            properties: {},
+            children: text.split('\n').map(line => 
+              new Paragraph({
+                children: [new TextRun(line || ' ')]
+              })
+            )
+          }]
+        });
+        
+        const buffer = await Packer.toBuffer(doc);
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename || 'formatted_document'}.docx"`);
+        
+        return res.status(200).send(buffer);
+      } catch (err) {
+        return res.status(500).json({ error: 'Failed to generate document: ' + err.message });
+      }
+    }
+    
     // Convert Word document to exam format
     if (path === 'convert-to-exam' && req.method === 'POST') {
       const formData = await req.formData();
@@ -515,35 +710,7 @@ export default async function handler(req, res) {
       }
     }
     
-    return res.status(405).json({ error: 'Method not allowed' });
-  } catch (error) {
-    console.error('API Error:', error);
-    return res.status(500).json({ error: error.message });
-  }
-}
-      
-      // Delete exam
-      if (path.startsWith('exams/')) {
-        const id = path.split('/')[1];
-        await database.collection('exams').deleteOne({ _id: new ObjectId(id) });
-        return res.status(200).json({ message: 'Exam deleted' });
-      }
-      
-      // Toggle result published
-      if (path.startsWith('exams/') && path.endsWith('/publish-result')) {
-        const id = path.split('/')[1];
-        const { publish } = req.body;
-        await database.collection('exams').updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { result_published: publish } }
-        );
-        return res.status(200).json({ success: true, result_published: publish });
-      }
-      
-      return res.status(404).json({ error: 'Endpoint not found' });
-    }
-    
-    return res.status(405).json({ error: 'Method not allowed' });
+     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('API Error:', error);
     return res.status(500).json({ error: error.message });

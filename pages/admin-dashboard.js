@@ -6,6 +6,12 @@ export default function AdminDashboard() {
   const [activeMenu, setActiveMenu] = useState("create");
   const [editMode, setEditMode] = useState(false);
   const [createView, setCreateView] = useState("exam");
+  
+  // Convert to Template state
+  const [convertFile, setConvertFile] = useState(null);
+  const [convertStatus, setConvertStatus] = useState('');
+  const [convertError, setConvertError] = useState('');
+  const [formattedResult, setFormattedResult] = useState(null);
 
   const [profileView, setProfileView] = useState("view");
   const [adminData, setAdminData] = useState(null);
@@ -683,6 +689,7 @@ export default function AdminDashboard() {
               <div className={styles.tabs}>
                 <button onClick={()=>setCreateView("exam")}>Create Exam</button>
                 <button onClick={()=>setCreateView("student")}>Add Student</button>
+                <button onClick={()=>setCreateView("convert")}>Convert to Template</button>
               </div>
 
               {/* CREATE EXAM */}
@@ -784,6 +791,177 @@ export default function AdminDashboard() {
                   <button className={styles.btn} onClick={addStudent}>
                     Add Student
                   </button>
+                </div>
+              )}
+
+              {/* CONVERT TO TEMPLATE */}
+              {createView === "convert" && (
+                <div className={styles.card} style={{maxWidth: '800px', margin: '0 auto'}}>
+                  <h3 style={{textAlign: "center"}}>Convert Word File to Template Format</h3>
+                  
+                  <p style={{color: '#666', marginBottom: '20px', textAlign: 'center'}}>
+                    Upload any Word document (.docx) and convert it to the correct template format.
+                    The output will follow the sample_template_instructions.txt format.
+                  </p>
+
+                  <div style={{marginBottom: '20px'}}>
+                    <input
+                      type="file"
+                      accept=".docx,.doc"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setConvertFile(file);
+                          setConvertError('');
+                          setFormattedResult(null);
+                        }
+                      }}
+                      style={{marginBottom: '10px'}}
+                    />
+                    <button
+                      className={styles.btn}
+                      onClick={async () => {
+                        if (!convertFile) {
+                          setConvertError('Please select a file first');
+                          return;
+                        }
+                        
+                        setConvertStatus('Converting...');
+                        setConvertError('');
+                        
+                        const formData = new FormData();
+                        formData.append('file', convertFile);
+                        
+                        try {
+                          const response = await fetch('https://vijeta-api.onrender.com/api/convert-to-template', {
+                            method: 'POST',
+                            body: formData
+                          });
+                          
+                          const result = await response.json();
+                          
+                          if (response.ok && result.success) {
+                            setConvertStatus('Conversion successful!');
+                            setFormattedResult(result);
+                          } else {
+                            setConvertError(result.error || 'Conversion failed');
+                            setConvertStatus('');
+                          }
+                        } catch (err) {
+                          setConvertError('Error during conversion: ' + err.message);
+                          setConvertStatus('');
+                        }
+                      }}
+                      disabled={!convertFile}
+                      style={{marginLeft: '10px'}}
+                    >
+                      Convert to Template
+                    </button>
+                  </div>
+
+                  {convertStatus && (
+                    <div style={{padding: '10px', background: '#d4edda', color: '#155724', borderRadius: '4px', marginBottom: '20px'}}>
+                      {convertStatus}
+                    </div>
+                  )}
+
+                  {convertError && (
+                    <div style={{padding: '10px', background: '#f8d7da', color: '#721c24', borderRadius: '4px', marginBottom: '20px'}}>
+                      {convertError}
+                    </div>
+                  )}
+
+                  {formattedResult && (
+                    <div style={{marginTop: '20px'}}>
+                      <h4>Converted Text (Template Format):</h4>
+                      <pre style={{
+                        background: '#f8f9fa',
+                        padding: '15px',
+                        borderRadius: '4px',
+                        overflow: 'auto',
+                        maxHeight: '400px',
+                        whiteSpace: 'pre-wrap',
+                        fontSize: '12px'
+                      }}>
+                        {formattedResult.formatted_text}
+                      </pre>
+                      
+                      <div style={{marginTop: '15px', display: 'flex', gap: '10px'}}>
+                        <button
+                          className={styles.btn}
+                          onClick={() => {
+                            const blob = new Blob([formattedResult.formatted_text], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `formatted_${convertFile.name.replace(/\.[^/.]+$/, '')}.txt`;
+                            a.click();
+                          }}
+                        >
+                          Download as Text File
+                        </button>
+                        
+                        <button
+                          className={styles.btn}
+                          onClick={async () => {
+                            try {
+                              setConvertStatus('Generating Word document...');
+                              
+                              const response = await fetch('https://vijeta-api.onrender.com/api/generate-formatted-docx', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                  text: formattedResult.formatted_text,
+                                  filename: convertFile.name.replace(/\.[^/.]+$/, '')
+                                })
+                              });
+                              
+                              if (response.ok) {
+                                const blob = await response.blob();
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `formatted_${convertFile.name.replace(/\.[^/.]+$/, '')}.docx`;
+                                a.click();
+                                setConvertStatus('Word document downloaded!');
+                              } else {
+                                alert('Error generating Word document');
+                              }
+                            } catch (err) {
+                              alert('Error creating Word document: ' + err.message);
+                            }
+                          }}
+                          style={{backgroundColor: '#28a745'}}
+                        >
+                          Download as Word (.docx)
+                        </button>
+                      </div>
+                      
+                      <p style={{marginTop: '10px', color: '#666', fontSize: '12px'}}>
+                        Total Questions: {formattedResult.total_questions} | Sections: {formattedResult.sections?.join(', ')}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div style={{marginTop: '30px', padding: '15px', background: '#fff3cd', borderRadius: '4px'}}>
+                    <h4 style={{marginTop: 0}}>Expected Format:</h4>
+                    <pre style={{fontSize: '11px', whiteSpace: 'pre-wrap'}}>
+[Section Name - General Knowledge]
+Q1. Your question here?
+A) Option A text
+B) Option B text
+C) Option C text
+D) Option D text
+Answer: B
+
+Q2. Your next question here?
+A) Option A
+B) Option B
+C) Option C
+D) Option D
+Answer: A
+                    </pre>
+                  </div>
                 </div>
               )}
             </>
