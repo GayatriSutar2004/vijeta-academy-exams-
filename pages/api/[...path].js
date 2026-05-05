@@ -8,7 +8,7 @@ import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 export const config = {
   api: {
-    bodyParser: true,
+    bodyParser: false,
   },
 };
 
