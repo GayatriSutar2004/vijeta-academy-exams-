@@ -89,7 +89,7 @@ export default function AdminDashboard() {
         const data = await res.json();
         if (data.length > 0) {
           const matchedAdmin = storedAdmin
-            ? data.find((admin) => admin.admin_id === JSON.parse(storedAdmin).admin_id) || data[0]
+            ? data.find((admin) => admin._id === JSON.parse(storedAdmin)._id) || data[0]
             : data[0];
 
           setAdminData(matchedAdmin);
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch(`/api/admin/update/${adminData.admin_id}`, {
+      const res = await fetch(`/api/admin/update/${adminData._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch(`/api/admin/password/${adminData.admin_id}`, {
+      const res = await fetch(`/api/admin/password/${adminData._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
   const handleUpdateExam = async () => {
     if (!editingExam) return;
     try {
-      const res = await fetch(`/api/exams/${editingExam.exam_id}`, {
+      const res = await fetch(`/api/exams/${editingExam._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -452,7 +452,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch(`/api/students/update/${editStudent.student_id}`, {
+      const res = await fetch(`/api/students/update/${editStudent._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editStudent)
@@ -1017,7 +1017,7 @@ Answer: A
                 </thead>
                 <tbody>
                   {students.length > 0 ? students.map((s)=>(
-                    <tr key={s.student_id}>
+                    <tr key={s._id}>
                       <td><strong>{s.roll_no}</strong></td>
                       <td>{s.student_name}</td>
                       <td>{s.email}</td>
@@ -1049,8 +1049,8 @@ Answer: A
                       </td>
                       <td>
                         <button className={styles.viewButton} onClick={()=>setEditStudent(s)}>View Details</button>
-                        <button onClick={()=>resetPassword(s.student_id)} style={{background: "#f0ad4e", color: "white", border: "none", padding: "4px 8px", borderRadius: "4px", cursor: "pointer", marginLeft: "5px"}}>Reset Pwd</button>
-                        <button onClick={()=>deleteStudent(s.student_id)}>Delete</button>
+                        <button onClick={()=>resetPassword(s._id)} style={{background: "#f0ad4e", color: "white", border: "none", padding: "4px 8px", borderRadius: "4px", cursor: "pointer", marginLeft: "5px"}}>Reset Pwd</button>
+                        <button onClick={()=>deleteStudent(s._id)}>Delete</button>
                       </td>
                     </tr>
                   )) : (
@@ -1132,8 +1132,8 @@ Answer: A
                         </thead>
                         <tbody>
                           {editStudent.attempts.map((attempt) => (
-                            <tr key={attempt.attempt_id}>
-                              <td>{attempt.attempt_id}</td>
+                            <tr key={attempt._id}>
+                              <td>{attempt._id}</td>
                               <td>{attempt.exam_name}</td>
                               <td><span className={styles.examTypeBadge}>{attempt.exam_type}</span></td>
                               <td>{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleDateString() : 'N/A'}</td>
@@ -1174,7 +1174,7 @@ Answer: A
                         </thead>
                         <tbody>
                           {editStudent.assigned_exams.map((exam) => (
-                            <tr key={exam.exam_id}>
+                            <tr key={exam._id}>
                               <td>{exam.exam_name}</td>
                               <td><span className={styles.examTypeBadge}>{exam.exam_type}</span></td>
                               <td>{exam.exam_date ? new Date(exam.exam_date).toLocaleDateString() : 'N/A'}</td>

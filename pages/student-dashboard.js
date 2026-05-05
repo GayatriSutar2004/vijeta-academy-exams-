@@ -18,7 +18,7 @@ export default function StudentDashboard() {
       return;
     }
     setStudentData(student);
-    fetchExams(student.student_id);
+    fetchExams(student._id);
   }, []);
 
   const fetchExams = async (studentId) => {
@@ -32,7 +32,7 @@ export default function StudentDashboard() {
       const attemptedExamIds = Array.isArray(attemptData) ? attemptData.map(a => a.exam_id) : [];
 
       const enrichedExams = (data.available_exams || []).map(exam => {
-        if (attemptedExamIds.includes(exam.exam_id)) {
+        if (attemptedExamIds.includes(exam._id)) {
           return { ...exam, exam_status: 'Completed' };
         }
         // Check if exam can be taken now (date AND time must both be passed)
@@ -150,7 +150,7 @@ export default function StudentDashboard() {
                   }
 
                   return filteredExams.map((exam) => (
-                    <div key={exam.exam_id} className={styles.examCard}>
+                    <div key={exam._id} className={styles.examCard}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
                         <h4>{exam.exam_name}</h4>
                         <span className={`${styles.badge} ${styles[(exam.exam_status || 'Available').toLowerCase()] || styles.available}`}>
@@ -164,7 +164,7 @@ export default function StudentDashboard() {
                       
                       <button 
                         className={styles.button}
-                        onClick={() => handleExamClick(exam.exam_id)}
+                        onClick={() => handleExamClick(exam._id)}
                         disabled={examTab === 'attempted' || examTab === 'upcoming'}
                         style={{ 
                           marginTop: "auto",
@@ -199,7 +199,7 @@ export default function StudentDashboard() {
                 </thead>
                 <tbody>
                   {exams.length > 0 ? exams.map((exam) => (
-                    <tr key={exam.exam_id}>
+                    <tr key={exam._id}>
                       <td><strong>{exam.exam_name}</strong></td>
                       <td>{new Date(exam.exam_date).toLocaleDateString()}</td>
                       <td>{exam.exam_time}</td>
@@ -212,7 +212,7 @@ export default function StudentDashboard() {
                       <td>
                         <button 
                           className={`${styles.button} ${styles.actionBtn}`}
-                          onClick={() => handleExamClick(exam.exam_id)}
+                          onClick={() => handleExamClick(exam._id)}
                           disabled={(exam.exam_status || 'Available').toLowerCase() === 'completed' || (exam.exam_status || 'Available').toLowerCase() === 'scheduled'}
                           style={{ 
                             padding: "8px 15px", 
@@ -241,7 +241,7 @@ export default function StudentDashboard() {
               <div className={styles.examGrid}>
                 {exams.filter(e => e.exam_status === 'Completed').length > 0 ? (
                   exams.filter(e => e.exam_status === 'Completed').map((exam) => (
-                    <div key={exam.exam_id} className={styles.examCard}>
+                    <div key={exam._id} className={styles.examCard}>
                       <h4>{exam.exam_name}</h4>
                       <p>📅 <strong>Date:</strong> {new Date(exam.exam_date).toLocaleDateString()}</p>
                       <p>⌛ <strong>Duration:</strong> {exam.duration_minutes} minutes</p>
@@ -256,9 +256,9 @@ export default function StudentDashboard() {
                           fetch(`/api/exam-attempts/student/${studentData.student_id}`)
                             .then(res => res.json())
                             .then(attempts => {
-                              const attempt = attempts.find(a => a.exam_id === exam.exam_id);
+                              const attempt = attempts.find(a => a.exam_id === exam._id);
                               if (attempt) {
-                                router.push(`/exam-result?attemptId=${attempt.attempt_id}`);
+                                router.push(`/exam-result?attemptId=${attempt._id}`);
                               } else {
                                 alert("Result details not found.");
                               }

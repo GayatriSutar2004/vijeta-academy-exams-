@@ -33,7 +33,7 @@ const getFullscreenElement = () =>
 
     const getSectionAnsweredCount = (sectionName, questionsBySection, answersObj) => {
         const sectionQuestions = questionsBySection[sectionName] || [];
-        return sectionQuestions.filter(q => isQuestionAnswered(q.question_id, answersObj)).length;
+        return sectionQuestions.filter(q => isQuestionAnswered(q._id, answersObj)).length;
     };
 
     export default function StudentExam() {
@@ -93,7 +93,7 @@ const getFullscreenElement = () =>
 
         const { examId } = router.query;
         if (examId) {
-            checkExamAccess(examId, student.student_id);
+            checkExamAccess(examId, student._id);
         }
     }, [router, router.query]);
 
@@ -194,13 +194,13 @@ const checkExamAccess = async (examId, studentId) => {
                 });
                 const latestData = await latestResponse.json();
                 
-                if (latestData && latestData.attempt_id) {
+                if (latestData && latestData._id) {
                     // Check if result is published
                     const examResponse = await fetch(`/api/exams/${examId}`);
                     const examData = await examResponse.json();
                     
                     if (examData.result_published) {
-                        router.push(`/exam-result?attemptId=${latestData.attempt_id}`);
+                        router.push(`/exam-result?attemptId=${latestData._id}`);
                         return;
                     } else {
                         setError('Results not yet published by admin.');
@@ -327,8 +327,8 @@ const checkExamAccess = async (examId, studentId) => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    student_id: currentStudentData.student_id,
-                    exam_id: currentExamData.exam.exam_id,
+                    student_id: currentStudentData._id,
+                    exam_id: currentExamData.exam._id,
                     answers: answersRef.current,
                     time_taken: Math.max(0, timeTaken)
                 })
@@ -345,7 +345,7 @@ const checkExamAccess = async (examId, studentId) => {
             if (response.ok) {
                 console.log('Exam submitted successfully:', result);
                 await exitFullscreen();
-                router.push(`/exam-result?attemptId=${result.attempt_id}`);
+                router.push(`/exam-result?attemptId=${result._id}`);
                 return;
             }
 
@@ -427,7 +427,7 @@ const checkExamAccess = async (examId, studentId) => {
     const goToQuestion = (question) => {
         setCurrentSection(question.sectionIndex);
         setTimeout(() => {
-            const questionElement = document.getElementById(`question-${question.question_id}`);
+            const questionElement = document.getElementById(`question-${question._id}`);
             if (questionElement) {
                 questionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
@@ -532,20 +532,20 @@ const checkExamAccess = async (examId, studentId) => {
                                     className={styles.sectionHeader}
                                     onClick={() => setCurrentSection(sectionIdx)}
                                 >
-                                    {sectionName} ({getSectionAnsweredCount(sectionName, answers)}/{getSectionQuestionCount(sectionName, questionsBySection)})
+                                    {sectionName} ({getSectionAnsweredCount(sectionName, questionsBySection, answers)}/{getSectionQuestionCount(sectionName, questionsBySection)})
                                 </div>
                                 <div className={styles.questionGrid}>
                                     {(questionsBySection[sectionName] || []).map((q, qIdx) => {
-                                        const isAnswered = isQuestionAnswered(q.question_id, answers);
+                                        const isAnswered = isQuestionAnswered(q._id, answers);
                                         const isCurrent = currentSection === sectionIdx && currentQuestion === qIdx;
                                         return (
                                             <div
-                                                key={q.question_id}
+                                                key={q._id}
                                                 className={`${styles.questionBox} ${isAnswered ? styles.answered : ''} ${isCurrent ? styles.current : ''}`}
                                                 onClick={() => {
                                                     setCurrentSection(sectionIdx);
                                                     setTimeout(() => {
-                                                        const el = document.getElementById(`question-${q.question_id}`);
+                                                        const el = document.getElementById(`question-${q._id}`);
                                                         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                                     }, 100);
                                                 }}
@@ -580,7 +580,7 @@ const checkExamAccess = async (examId, studentId) => {
                             <div key={sectionName}>
                                 <h3 className={styles.sectionTitle}>{sectionName}</h3>
                                 {(questionsBySection[sectionName] || []).map((question, qIdx) => {
-                                    const questionId = question.question_id;
+                                    const questionId = question._id;
                                     const isCurrent = currentSection === sectionIdx && currentQuestion === qIdx;
                                     const isAnswered = isQuestionAnswered(questionId, answers);
                                     
@@ -715,10 +715,10 @@ const checkExamAccess = async (examId, studentId) => {
                             <div className={styles.paletteGrid}>
                                 {allQuestionsList.map((q, idx) => (
                                     <button
-                                        key={q.question_id}
-                                        className={`${styles.paletteButton} ${isQuestionAnswered(q.question_id, answers) ? styles.paletteAnswered : ''}`}
+                                        key={q._id}
+                                        className={`${styles.paletteButton} ${isQuestionAnswered(q._id, answers) ? styles.paletteAnswered : ''}`}
                                         onClick={() => goToQuestion(q)}
-                                        title={`Q${idx + 1}${isQuestionAnswered(q.question_id, answers) ? ' (Answered)' : ''}`}
+                                        title={`Q${idx + 1}${isQuestionAnswered(q._id, answers) ? ' (Answered)' : ''}`}
                                     >
                                         {idx + 1}
                                     </button>
@@ -749,7 +749,7 @@ const checkExamAccess = async (examId, studentId) => {
                             {(questionsBySection[sectionName] || []).map((question, questionIndex) => {
                                 const globalIndex = sections.slice(0, sectionIndex).reduce((acc, sec) => acc + (questionsBySection[sec] || []).length, 0) + questionIndex + 1;
                                 return (
-                                <div key={question.question_id} id={`question-${question.question_id}`} className={styles.questionCard}>
+                                <div key={question._id} id={`question-${question._id}`} className={styles.questionCard}>
                                     <div className={styles.questionHeader}>
                                         <span className={styles.questionNumber}>
                                             Q{globalIndex}
@@ -784,15 +784,15 @@ const checkExamAccess = async (examId, studentId) => {
 
                                             return (
                                                 <label
-                                                    key={`${question.question_id}-${parsedOption.label}-${optionIndex}`}
+                                                    key={`${question._id}-${parsedOption.label}-${optionIndex}`}
                                                     className={styles.optionLabel}
                                                 >
                                                     <input
                                                         type="radio"
-                                                        name={`question_${question.question_id}`}
+                                                        name={`question_${question._id}`}
                                                         value={parsedOption.label}
-                                                        checked={answers[question.question_id] === parsedOption.label}
-                                                        onChange={() => handleAnswerChange(question.question_id, parsedOption.label)}
+                                                        checked={answers[question._id] === parsedOption.label}
+                                                        onChange={() => handleAnswerChange(question._id, parsedOption.label)}
                                                         className={styles.optionInput}
                                                     />
                                                     <span className={styles.optionText}>

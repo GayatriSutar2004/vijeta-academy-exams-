@@ -310,10 +310,13 @@ export default async function handler(req, res) {
        
        // Get next roll number
        if (path === 'students/next-roll-no') {
-         const lastStudent = await database.collection('students').find({}).sort({ roll_no: -1 }).limit(1).toArray();
+         const allStudents = await database.collection('students').find({}).sort({ roll_no: -1 }).toArray();
          let nextRoll = 1001;
-         if (lastStudent.length > 0 && lastStudent[0].roll_no) {
-           nextRoll = parseInt(lastStudent[0].roll_no) + 1;
+         for (const s of allStudents) {
+           const num = parseInt(s.roll_no);
+           if (!isNaN(num) && num >= nextRoll) {
+             nextRoll = num + 1;
+           }
          }
          return res.status(200).json({ next_roll_no: nextRoll });
        }
