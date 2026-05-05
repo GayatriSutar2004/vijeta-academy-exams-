@@ -79,7 +79,7 @@ export default function ExamPage() {
     }
     
     const student = JSON.parse(storedStudentData);
-    const studentId = student.student_id;
+    const studentId = student._id;
     
     // Convert array of answers to object format expected by backend
     const answersObj = {};
@@ -120,7 +120,7 @@ export default function ExamPage() {
       setLoading(false);
       
       // Redirect to result page
-      router.push(`/exam-result?attemptId=${result.attempt_id}`);
+      router.push(`/exam-result?attemptId=${result._id}`);
     } catch (err) {
       console.error("Submission error:", err);
       setLoading(false);

@@ -253,7 +253,7 @@ export default function StudentDashboard() {
                         className={styles.button}
                         onClick={() => {
                           // Find attempt ID for this exam
-                          fetch(`/api/exam-attempts/student/${studentData.student_id}`)
+                          fetch(`/api/exam-attempts/student/${studentData._id}`)
                             .then(res => res.json())
                             .then(attempts => {
                               const attempt = attempts.find(a => a.exam_id === exam._id);

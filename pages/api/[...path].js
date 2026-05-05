@@ -3,11 +3,21 @@ import mammoth from 'mammoth';
 import AdmZip from 'adm-zip';
 import fs from 'fs';
 import path from 'path';
+import getRawBody from 'raw-body';
 
 export const config = {
   api: {
-    bodyParser: true,
+    bodyParser: false,
   },
+};
+
+const parseBody = async (req) => {
+  try {
+    const raw = await getRawBody(req);
+    return JSON.parse(raw.toString());
+  } catch (e) {
+    return {};
+  }
 };
 
 let client;
@@ -143,6 +153,77 @@ export default async function handler(req, res) {
         adminResults: '/api/admin-results'
       }
     });
+  }
+  
+  // Parse body based on content type
+  let body = {};
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('application/json')) {
+    body = await parseBody(req);
+  }
+  
+  // Handle FormData for exam creation
+  if (path === 'exams/add' && req.method === 'POST' && contentType.includes('multipart/form-data')) {
+    const { formidable } = await import('formidable');
+    const form = formidable({ multiples: true });
+    try {
+      const [fields, files] = await form.parse(req);
+      const file = files.file?.[0];
+      
+      if (!file || !fields.exam_name?.[0]) {
+        return res.status(400).json({ error: 'Missing file or exam name' });
+      }
+      
+      // Parse the Word document
+      const parseResult = await parseWordDocument(file.filepath);
+      
+      // Create exam
+      const newExam = {
+        exam_name: fields.exam_name[0],
+        duration_minutes: parseInt(fields.duration_minutes?.[0] || '60'),
+        total_questions: parseResult.questions.length,
+        exam_type: fields.exam_type?.[0] || 'NDA',
+        exam_date: fields.exam_date?.[0] || new Date().toISOString().split('T')[0],
+        exam_time: fields.exam_time?.[0] || '09:00:00',
+        target_batch_name: fields.target_batch_name?.[0] || '',
+        target_admission_year: fields.target_admission_year?.[0] ? parseInt(fields.target_admission_year[0]) : null,
+        result_published: false,
+        created_at: new Date()
+      };
+      
+      const examResult = await database.collection('exams').insertOne(newExam);
+      const examId = examResult.insertedId;
+      
+      // Insert questions
+      if (parseResult.questions.length > 0) {
+        const questionsToInsert = parseResult.questions.map((q, idx) => ({
+          exam_id: examId,
+          question_text: q.question_text,
+          options: q.options || [],
+          correct_answer: q.correct_answer || '',
+          section: q.section || 'General',
+          question_number: idx + 1,
+          image_path: q.image_path || null,
+          marks: 1,
+          created_at: new Date()
+        }));
+        
+        await database.collection('questions').insertMany(questionsToInsert);
+      }
+      
+      // Clean up temp file
+      fs.unlinkSync(file.filepath);
+      
+      return res.status(200).json({ 
+        message: 'Exam created', 
+        exam_id: examId,
+        questions_parsed: parseResult.questions.length,
+        images_extracted: parseResult.images?.length || 0
+      });
+    } catch (err) {
+      console.error('Exam creation error:', err);
+      return res.status(500).json({ error: 'Failed to create exam: ' + err.message });
+    }
   }
   
   try {
@@ -330,24 +411,14 @@ export default async function handler(req, res) {
        // Toggle result published (GET fallback)
        if (path.startsWith('exams/') && path.endsWith('/publish-result')) {
          const id = path.split('/')[1];
-         const { publish } = req.body;
          await database.collection('exams').updateOne(
            { _id: new ObjectId(id) },
-           { $set: { result_published: publish } }
+           { $set: { result_published: true } }
          );
-         return res.status(200).json({ success: true, result_published: publish });
-       }
+          return res.status(200).json({ success: true, result_published: true });
+        }
        
-       // Get latest attempt for student+exam
-       if (path === 'latest-attempt') {
-         const { student_id, exam_id } = req.body;
-         const attempt = await database.collection('exam_attempts').findOne(
-           { student_id: new ObjectId(student_id), exam_id: new ObjectId(exam_id), is_latest: true }
-         );
-         return res.status(200).json(attempt || { error: 'No attempt found' });
-       }
-      
-      // Get student by ID
+       // Get student by ID
       if (path.startsWith('students/')) {
         const id = path.split('/')[1];
         const result = await database.collection('students').findOne({ _id: new ObjectId(id) });
@@ -373,8 +444,6 @@ export default async function handler(req, res) {
     }
     
     if (req.method === 'POST') {
-      const body = req.body;
-      
       // Admin login
       if (path === 'admin/login') {
         const result = await database.collection('admin').findOne({ email: body.email, password_hash: body.password });
@@ -406,63 +475,16 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Student added', student_id: result.insertedId });
       }
       
-// Add exam
-        if (path === 'exams/add') {
-          const newExam = {
-            exam_name: body.exam_name,
-            duration_minutes: parseInt(body.duration_minutes),
-            total_questions: parseInt(body.total_questions),
-            exam_type: body.exam_type,
-            exam_date: body.exam_date,
-            exam_time: body.exam_time,
-            created_by: body.created_by,
-            result_published: false,
-            created_at: new Date()
-          };
-          const result = await database.collection('exams').insertOne(newExam);
-          return res.status(200).json({ message: 'Exam created', exam_id: result.insertedId });
-        }
-        
-        // Upload and parse Word file
-        if (path === 'upload-exam') {
-          const { exam_id, file_path } = body;
-          
-          if (!file_path || !exam_id) {
-            return res.status(400).json({ error: 'exam_id and file_path required' });
-          }
-          
-          const parseResult = await parseWordDocument(file_path);
-          
-          // Insert questions
-          if (parseResult.questions && parseResult.questions.length > 0) {
-            const questionsToInsert = parseResult.questions.map((q, idx) => ({
-              exam_id: new ObjectId(exam_id),
-              question_text: q.question_text,
-              options: q.options || [],
-              correct_answer: q.correct_answer || '',
-              section: q.section || 'General',
-              question_number: idx + 1,
-              marks: 1,
-              created_at: new Date()
-            }));
-            
-            await database.collection('questions').insertMany(questionsToInsert);
-            
-            // Update exam with total questions
-            await database.collection('exams').updateOne(
-              { _id: new ObjectId(exam_id) },
-              { $set: { total_questions: parseResult.questions.length } }
-            );
-          }
-          
-          return res.status(200).json({
-            success: true,
-            questions_parsed: parseResult.questions?.length || 0,
-            images_extracted: parseResult.images?.length || 0
-          });
-        }
+      // Get latest attempt for student+exam
+      if (path === 'latest-attempt') {
+        const { student_id, exam_id } = body;
+        const attempt = await database.collection('exam_attempts').findOne(
+          { student_id: new ObjectId(student_id), exam_id: new ObjectId(exam_id), is_latest: true }
+        );
+        return res.status(200).json(attempt || { error: 'No attempt found' });
+      }
       
-// Submit exam attempt (allow multiple, latest = final)
+      // Submit exam attempt (allow multiple, latest = final)
        if (path === 'exam-attempts') {
          const { student_id, exam_id, answers } = body;
          
@@ -505,8 +527,6 @@ export default async function handler(req, res) {
     }
     
     if (req.method === 'PUT') {
-      const body = req.body;
-      
       // Update admin profile
       if (path.startsWith('admin/update/')) {
         const adminId = path.split('/').pop();
@@ -606,12 +626,11 @@ export default async function handler(req, res) {
       // Toggle result published
       if (path.startsWith('exams/') && path.endsWith('/publish-result')) {
         const id = path.split('/')[1];
-        const { publish } = req.body;
         await database.collection('exams').updateOne(
           { _id: new ObjectId(id) },
-          { $set: { result_published: publish } }
+          { $set: { result_published: body.publish ?? true } }
         );
-        return res.status(200).json({ success: true, result_published: publish });
+        return res.status(200).json({ success: true, result_published: body.publish ?? true });
       }
       
       return res.status(404).json({ error: 'Endpoint not found' });

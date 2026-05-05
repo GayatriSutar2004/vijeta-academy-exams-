@@ -582,7 +582,7 @@ export default function AdminDashboard() {
         time24Hour = '00:00';
       }
       formData.append('exam_time', time24Hour);
-      formData.append('created_by', adminData?.admin_id || 1);
+      formData.append('created_by', adminData?._id || '');
       formData.append('file', cFile);
       
       console.log("FormData created successfully");
@@ -1551,7 +1551,7 @@ Answer: A
                         .filter(r => r.exam_id === selectedExamId && (r.target_batch_name || 'Other') === selectedBatch)
                         .sort((a, b) => b.percentage - a.percentage)
                         .map((result, idx) => (
-                          <tr key={result.attempt_id} style={{ background: idx === 0 && result.percentage >= 40 ? '#e8f5e9' : '' }}>
+                          <tr key={result._id} style={{ background: idx === 0 && result.percentage >= 40 ? '#e8f5e9' : '' }}>
                             <td><strong>{result.roll_no}</strong></td>
                             <td>{result.student_name}</td>
                             <td>{result.mobile_no || 'N/A'}</td>
@@ -1569,8 +1569,8 @@ Answer: A
                             <td>{Math.floor((result.time_taken_seconds || 0) / 60)}m {(result.time_taken_seconds || 0) % 60}s</td>
                             <td>{new Date(result.submitted_at || result.start_time).toLocaleDateString()}</td>
                             <td>
-                              <button className={styles.viewButton} onClick={() => viewResultDetails(result.attempt_id)}>View</button>
-                              <button className={styles.deleteButton} onClick={() => deleteResult(result.attempt_id)}>Delete</button>
+                              <button className={styles.viewButton} onClick={() => viewResultDetails(result._id)}>View</button>
+                              <button className={styles.deleteButton} onClick={() => deleteResult(result._id)}>Delete</button>
                             </td>
                           </tr>
                         ))}
@@ -1671,7 +1671,7 @@ Answer: A
 
                     <tbody>
                       {exams.length > 0 ? exams.map((exam) => (
-                        <tr key={exam.exam_id}>
+                        <tr key={exam._id}>
                           <td>{exam.exam_name}</td>
                           <td>{exam.exam_type}</td>
                           <td>{exam.target_batch_name || 'All'}</td>
@@ -1684,7 +1684,7 @@ Answer: A
                           <td>{exam.total_questions}</td>
                           <td style={{ display: 'flex', gap: '5px' }}>
                             <button 
-                              onClick={() => togglePublishResult(exam.exam_id, exam.result_published)}
+                              onClick={() => togglePublishResult(exam._id, exam.result_published)}
                               style={{ 
                                 background: exam.result_published ? '#28a745' : '#dc3545',
                                 color: 'white',
@@ -1826,7 +1826,7 @@ Answer: A
 
                   <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                     <button className={styles.btn} onClick={handleUpdateExam}>Save Changes</button>
-                    <button className={`${styles.btn} ${styles.logoutBtn}`} onClick={() => handleDeleteExam(editingExam.exam_id)}>Delete</button>
+                    <button className={`${styles.btn} ${styles.logoutBtn}`} onClick={() => handleDeleteExam(editingExam._id)}>Delete</button>
                     <button className={styles.btn} onClick={() => { setEditMode(false); setEditingExam(null); }}>Cancel</button>
                   </div>
                 </div>
