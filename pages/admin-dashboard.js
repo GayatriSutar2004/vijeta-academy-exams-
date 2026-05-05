@@ -85,7 +85,7 @@ export default function AdminDashboard() {
           setEditMobile(parsedAdmin.mobile_no);
         }
 
-        const res = await fetch("https://vijeta-api.onrender.com/api/admin/");
+        const res = await fetch("/api/admin/");
         const data = await res.json();
         if (data.length > 0) {
           const matchedAdmin = storedAdmin
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/admin/update/${adminData.admin_id}`, {
+      const res = await fetch(`/api/admin/update/${adminData.admin_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -126,7 +126,7 @@ export default function AdminDashboard() {
       alert(data.message);
       if (res.ok) {
         // Refresh admin data
-        const adminRes = await fetch("https://vijeta-api.onrender.com/api/admin/");
+        const adminRes = await fetch("/api/admin/");
         const adminData = await adminRes.json();
         if (adminData.length > 0) {
           setAdminData(adminData[0]);
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/admin/password/${adminData.admin_id}`, {
+      const res = await fetch(`/api/admin/password/${adminData.admin_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
 
   const fetchNextRollNo = async () => {
     try {
-      const res = await fetch("https://vijeta-api.onrender.com/api/students/next-roll-no");
+      const res = await fetch("/api/students/next-roll-no");
       const data = await res.json();
       if (data.next_roll_no) {
         setSRoll(data.next_roll_no);
@@ -206,7 +206,7 @@ export default function AdminDashboard() {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch("https://vijeta-api.onrender.com/api/students/with-results");
+      const res = await fetch("/api/students/with-results");
       const data = await res.json();
       if (Array.isArray(data)) {
         setStudents(data);
@@ -229,7 +229,7 @@ export default function AdminDashboard() {
 
   const fetchExams = async () => {
     try {
-      const res = await fetch("https://vijeta-api.onrender.com/api/exams");
+      const res = await fetch("/api/exams");
       const data = await res.json();
       setExams(data);
     } catch (err) {
@@ -256,7 +256,7 @@ export default function AdminDashboard() {
   const togglePublishResult = async (examId, currentStatus) => {
     const newStatus = !currentStatus;
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/exams/${examId}/publish-result`, {
+      const res = await fetch(`/api/exams/${examId}/publish-result`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ publish: newStatus })
@@ -278,7 +278,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/exams/${examId}`, {
+      const res = await fetch(`/api/exams/${examId}`, {
         method: "DELETE"
       });
       if (res.ok) {
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
   const handleUpdateExam = async () => {
     if (!editingExam) return;
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/exams/${editingExam.exam_id}`, {
+      const res = await fetch(`/api/exams/${editingExam.exam_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -331,7 +331,7 @@ export default function AdminDashboard() {
 
   const fetchResults = async () => {
     try {
-      const res = await fetch("https://vijeta-api.onrender.com/api/admin-results");
+      const res = await fetch("/api/admin-results");
       const data = await res.json();
       if (Array.isArray(data)) {
         setResults(data);
@@ -348,8 +348,8 @@ export default function AdminDashboard() {
   const fetchResultsByExamType = async (examType) => {
     try {
       const url = examType === 'all' 
-        ? "https://vijeta-api.onrender.com/api/admin-results"
-        : `https://vijeta-api.onrender.com/api/admin-results/by-exam-type/${examType}`;
+        ? "/api/admin-results"
+        : `/api/admin-results/by-exam-type/${examType}`;
       
       const res = await fetch(url);
       const data = await res.json();
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
 
   const viewResultDetails = async (attemptId) => {
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/admin-results/${attemptId}`);
+      const res = await fetch(`/api/admin-results/${attemptId}`);
       const data = await res.json();
       
       setSelectedStudentResult(data);
@@ -384,7 +384,7 @@ export default function AdminDashboard() {
     }
     
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/admin-results/${attemptId}`, {
+      const res = await fetch(`/api/admin-results/${attemptId}`, {
         method: "DELETE"
       });
       
@@ -412,7 +412,7 @@ export default function AdminDashboard() {
     if (!newPassword) return;
 
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/students/reset-password/${id}`, {
+      const res = await fetch(`/api/students/reset-password/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ new_password: newPassword })
@@ -430,7 +430,7 @@ export default function AdminDashboard() {
     if (!window.confirm("Delete this student?")) return;
 
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/students/delete/${id}`, {
+      const res = await fetch(`/api/students/delete/${id}`, {
         method: "DELETE"
       });
 
@@ -452,7 +452,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch(`https://vijeta-api.onrender.com/api/students/update/${editStudent.student_id}`, {
+      const res = await fetch(`/api/students/update/${editStudent.student_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editStudent)
@@ -481,7 +481,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch("https://vijeta-api.onrender.com/api/students/add", {
+      const res = await fetch("/api/students/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -597,11 +597,11 @@ export default function AdminDashboard() {
     }
 
     try {
-      console.log("Starting API call to https://vijeta-api.onrender.com/api/exams/add");
+      console.log("Starting API call to /api/exams/add");
       console.log("Request method: POST");
       console.log("Request body type: FormData");
       
-      const res = await fetch("https://vijeta-api.onrender.com/api/exams/add", {
+      const res = await fetch("/api/exams/add", {
         method: "POST",
         body: formData,
         // Don't set Content-Type header when using FormData - browser sets it automatically with boundary
@@ -833,7 +833,7 @@ export default function AdminDashboard() {
                         formData.append('file', convertFile);
                         
                         try {
-                          const response = await fetch('https://vijeta-api.onrender.com/api/convert-to-template', {
+                          const response = await fetch('/api/convert-to-template', {
                             method: 'POST',
                             body: formData
                           });
@@ -907,7 +907,7 @@ export default function AdminDashboard() {
                             try {
                               setConvertStatus('Generating Word document...');
                               
-                              const response = await fetch('https://vijeta-api.onrender.com/api/generate-formatted-docx', {
+                              const response = await fetch('/api/generate-formatted-docx', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ 

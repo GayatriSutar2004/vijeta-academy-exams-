@@ -20,12 +20,12 @@ export default function ExamPage() {
     const fetchExamData = async () => {
       try {
         // Fetch exam details
-        const examRes = await fetch(`https://vijeta-api.onrender.com/api/exams/${examId}`);
+        const examRes = await fetch(`/api/exams/${examId}`);
         const examData = await examRes.json();
         setExamDetails(examData);
 
         // Fetch questions
-        const res = await fetch(`https://vijeta-api.onrender.com/api/exams/${examId}/questions`);
+        const res = await fetch(`/api/exams/${examId}/questions`);
         const data = await res.json();
         setQuestions(data);
         setAnswers(Array(data.length).fill(null));
@@ -96,7 +96,7 @@ export default function ExamPage() {
       const totalDuration = examDetails.duration_minutes * 60;
       const timeTaken = totalDuration - timeLeft;
 
-      const res = await fetch("https://vijeta-api.onrender.com/api/exam-attempts", {
+      const res = await fetch("/api/exam-attempts", {
         method: "POST",
         headers: { 
           "Accept": "application/json",

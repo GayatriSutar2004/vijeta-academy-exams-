@@ -176,7 +176,7 @@ const getFullscreenElement = () =>
 
 const checkExamAccess = async (examId, studentId) => {
         try {
-            const response = await fetch(`https://vijeta-api.onrender.com/api/student-exams/${examId}/check-access/${studentId}`);
+            const response = await fetch(`/api/student-exams/${examId}/check-access/${studentId}`);
             const data = await response.json();
             
             if (response.status === 403 || response.status === 404) {
@@ -187,7 +187,7 @@ const checkExamAccess = async (examId, studentId) => {
             
             if (data.access_status === 'ELIGIBLE') {
                 // Check for existing latest attempt
-                const latestResponse = await fetch('https://vijeta-api.onrender.com/api/latest-attempt', {
+                const latestResponse = await fetch('/api/latest-attempt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ student_id, exam_id: examId })
@@ -196,7 +196,7 @@ const checkExamAccess = async (examId, studentId) => {
                 
                 if (latestData && latestData.attempt_id) {
                     // Check if result is published
-                    const examResponse = await fetch(`https://vijeta-api.onrender.com/api/exams/${examId}`);
+                    const examResponse = await fetch(`/api/exams/${examId}`);
                     const examData = await examResponse.json();
                     
                     if (examData.result_published) {
@@ -223,7 +223,7 @@ const checkExamAccess = async (examId, studentId) => {
 
     const loadExamQuestions = async (examId, studentId) => {
         try {
-            const response = await fetch(`https://vijeta-api.onrender.com/api/student-exams/${examId}/questions/${studentId}`);
+            const response = await fetch(`/api/student-exams/${examId}/questions/${studentId}`);
             const data = await response.json();
 
             if (response.ok) {
@@ -320,7 +320,7 @@ const checkExamAccess = async (examId, studentId) => {
             const totalDuration = currentExamData.exam.duration_minutes * 60;
             const timeTaken = totalDuration - (timeRemainingRef.current || 0);
 
-            const response = await fetch('https://vijeta-api.onrender.com/api/exam-attempts', {
+            const response = await fetch('/api/exam-attempts', {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',

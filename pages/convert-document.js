@@ -31,7 +31,7 @@ export default function ConvertDocument() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('https://vijeta-api.onrender.com/api/convert-to-exam', {
+      const response = await fetch('/api/convert-to-exam', {
         method: 'POST',
         body: formData
       });

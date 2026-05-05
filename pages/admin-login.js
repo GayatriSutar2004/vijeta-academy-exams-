@@ -10,7 +10,7 @@ export default function AdminLogin() {
 
   const handleLogin = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://vijeta-api.onrender.com';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
       const res = await fetch(`${API_URL}/api/admin/login`, {
         method: "POST",
         headers: {
