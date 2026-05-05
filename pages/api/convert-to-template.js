@@ -27,7 +27,7 @@ const convertToTemplateFormat = async (filePath) => {
       
       // Detect section headers like [General Knowledge]
       if (/^\[.*\]$/.test(line)) {
-        currentSection = line.replace(/[\[\]]/g, '').trim();
+        currentSection = line.replace(/[[\]]/g, '').trim();
         if (!result.sections.includes(currentSection)) {
           result.sections.push(currentSection);
         }
