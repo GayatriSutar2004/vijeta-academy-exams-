@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     const buffer = await Packer.toBuffer(doc);
     
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename || 'formatted_document'}.docx"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="' + (filename || 'formatted_document') + '.docx"');
     
     return res.status(200).send(buffer);
   } catch (err) {

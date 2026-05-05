@@ -25,7 +25,7 @@ const convertToTemplateFormat = async (filePath) => {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Detect section headers like "Section A", "General Knowledge", etc.
+      // Detect section headers like [General Knowledge]
       if (/^\[.*\]$/.test(line)) {
         currentSection = line.replace(/[\[\]]/g, '').trim();
         if (!result.sections.includes(currentSection)) {
@@ -43,7 +43,7 @@ const convertToTemplateFormat = async (filePath) => {
         continue;
       }
       
-      // Detect question start - various formats
+      // Detect question start - various formats: Q1, Q1., 1., Question 1, etc.
       const questionMatch = line.match(/^(?:Q\.?\s*(\d+)|(\d+)[\.\)]\s*|Question\s*(\d+)[\.\)]\s*)/i);
       
       if (questionMatch) {
@@ -69,8 +69,8 @@ const convertToTemplateFormat = async (filePath) => {
         continue;
       }
       
-      // Detect options - various formats
-      const optionMatch = line.match(/^([A-D])[\.\)\s]\s*(.+)/i);
+      // Detect options - A), A., A) text, etc.
+      const optionMatch = line.match(/^([A-D])[\.\)]\s*(.+)/i);
       if (optionMatch && currentQuestion) {
         const optionLetter = optionMatch[1].toUpperCase();
         const optionText = optionMatch[2].trim();
@@ -83,15 +83,15 @@ const convertToTemplateFormat = async (filePath) => {
         continue;
       }
       
-      // Detect answer line
-      const answerMatch = line.match(/^(?:Answer|Ans|Correct)[\s:]*([A-D])/i);
+      // Detect answer line: Answer: B, Ans: B, Correct: B
+      const answerMatch = line.match(/^(?:Answer|Ans|Correct)\s*:\s*([A-D])/i);
       if (answerMatch && currentQuestion) {
         currentQuestion.answer = answerMatch[1].toUpperCase();
         continue;
       }
       
       // If line looks like continuation of question text
-      if (currentQuestion && currentQuestion.options.length === 0 && !/^[A-D][\.\)\s]/.test(line)) {
+      if (currentQuestion && currentQuestion.options.length === 0 && !/^[A-D][\.\)]\s/.test(line)) {
         currentQuestion.text += ' ' + line;
         continue;
       }
@@ -109,15 +109,15 @@ const convertToTemplateFormat = async (filePath) => {
     for (const q of questions) {
       if (q.section !== currentSectionName) {
         currentSectionName = q.section;
-        formattedText += `\n[${currentSectionName}]\n\n`;
+        formattedText += '\n[' + currentSectionName + ']\n\n';
       }
       
-      formattedText += `Q${q.number}. ${q.text}\n`;
-      formattedText += `A) ${q.options[0] || ''}\n`;
-      formattedText += `B) ${q.options[1] || ''}\n`;
-      formattedText += `C) ${q.options[2] || ''}\n`;
-      formattedText += `D) ${q.options[3] || ''}\n`;
-      formattedText += `Answer: ${q.answer || 'B'}\n\n`;
+      formattedText += 'Q' + q.number + '. ' + q.text + '\n';
+      formattedText += 'A) ' + (q.options[0] || '') + '\n';
+      formattedText += 'B) ' + (q.options[1] || '') + '\n';
+      formattedText += 'C) ' + (q.options[2] || '') + '\n';
+      formattedText += 'D) ' + (q.options[3] || '') + '\n';
+      formattedText += 'Answer: ' + (q.answer || 'B') + '\n\n';
     }
     
     result.formatted_text = formattedText.trim();
